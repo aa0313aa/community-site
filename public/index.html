@@ -88,7 +88,7 @@
           <option value="fraud">사기업체</option>
           <option value="other">기타</option>
         </select>
-        <input id="searchInput" type="text" placeholder="업체명 검색..." class="border rounded px-3 py-2 flex-1 min-w-0">
+  <input id="searchInput" name="q" type="search" placeholder="업체명 검색..." class="border rounded px-3 py-2 flex-1 min-w-0" autocomplete="off" autocapitalize="none" spellcheck="false">
         <button onclick="searchCompanies()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">검색</button>
       </div>
     </div>
@@ -579,6 +579,14 @@
       if (!user && writeBox && !writeBox.classList.contains('hidden')) {
         writeBox.classList.add('hidden');
       }
+
+      // 로그인 직후 브라우저 자동완성으로 검색창에 아이디가 들어가는 문제 방지
+      try {
+        const searchEl = $('#searchInput');
+        if (searchEl && user && searchEl.value === user.username) {
+          searchEl.value = '';
+        }
+      } catch (_) { /* noop */ }
     }
 
     function updateAuthArea() {
@@ -805,8 +813,9 @@
         // 인증 상태 초기화
         setAuthState(null);
 
-        // 메인(업체목록)으로 전환
-        showSection('companies');
+  // 검색창 초기화 후 메인(업체목록)으로 전환
+  try { const s = $('#searchInput'); if (s) s.value = ''; } catch(_){}
+  showSection('companies');
 
         // URL을 홈으로 정리하고 메타 갱신
         try {
