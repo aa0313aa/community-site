@@ -64,6 +64,7 @@
             <button onclick="showSection('add-company')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">업체등록</button>
             <button onclick="showSection('posts')" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">자유게시판</button>
             <a href="/trending" class="inline-block px-4 py-2 border border-blue-300 text-blue-600 rounded hover:bg-blue-50">사기 정보 공유</a>
+            <button id="mypageBtn" onclick="showSection('mypage')" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 hidden">마이페이지</button>
             <button id="adminMenuBtn" onclick="showSection('admin')" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 hidden">관리자</button>
           </nav>
           <div id="authArea" class="flex items-center gap-2 text-sm">
@@ -238,6 +239,71 @@
               </thead>
               <tbody id="admin-users-list" class="divide-y"></tbody>
             </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 마이페이지 섹션 -->
+    <section id="mypage-section" class="mb-8 hidden">
+      <div class="bg-white p-6 rounded-lg shadow">
+        <h2 class="text-2xl font-bold text-purple-600 mb-4">👤 마이페이지</h2>
+        
+        <!-- 탭 메뉴 -->
+        <div class="flex border-b mb-6">
+          <button onclick="switchMypageTab('myinfo')" class="mypage-tab-btn px-4 py-2 border-b-2 border-purple-600 text-purple-600 font-semibold" data-tab="myinfo">내 정보</button>
+          <button onclick="switchMypageTab('myposts')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="myposts">내가 쓴 글</button>
+          <button onclick="switchMypageTab('mycomments')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="mycomments">내가 쓴 댓글</button>
+          <button onclick="switchMypageTab('changepw')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="changepw">비밀번호 변경</button>
+        </div>
+
+        <!-- 내 정보 탭 -->
+        <div id="mypage-myinfo-tab" class="mypage-tab">
+          <div class="bg-gray-50 p-6 rounded">
+            <h3 class="text-lg font-bold mb-4">🧑 계정 정보</h3>
+            <div class="space-y-3">
+              <p><strong>아이디:</strong> <span id="myinfo-username">-</span></p>
+              <p><strong>이메일:</strong> <span id="myinfo-email">-</span></p>
+              <p><strong>가입일:</strong> <span id="myinfo-joined">-</span></p>
+              <p><strong>권한:</strong> <span id="myinfo-role">-</span></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 내가 쓴 글 탭 -->
+        <div id="mypage-myposts-tab" class="mypage-tab hidden">
+          <div id="mypage-posts-list" class="space-y-4">
+            <p class="text-gray-500">로딩 중...</p>
+          </div>
+        </div>
+
+        <!-- 내가 쓴 댓글 탭 -->
+        <div id="mypage-mycomments-tab" class="mypage-tab hidden">
+          <div id="mypage-comments-list" class="space-y-4">
+            <p class="text-gray-500">로딩 중...</p>
+          </div>
+        </div>
+
+        <!-- 비밀번호 변경 탭 -->
+        <div id="mypage-changepw-tab" class="mypage-tab hidden">
+          <div class="bg-gray-50 p-6 rounded max-w-md">
+            <h3 class="text-lg font-bold mb-4">🔐 비밀번호 변경</h3>
+            <div class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-1">현재 비밀번호</label>
+                <input type="password" id="current-password" placeholder="현재 비밀번호" class="w-full px-3 py-2 border rounded">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">새 비밀번호</label>
+                <input type="password" id="new-password" placeholder="새 비밀번호 (8자 이상)" class="w-full px-3 py-2 border rounded">
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">새 비밀번호 확인</label>
+                <input type="password" id="confirm-password" placeholder="새 비밀번호 확인" class="w-full px-3 py-2 border rounded">
+              </div>
+              <button onclick="changePassword()" class="w-full bg-purple-600 text-white py-2 rounded hover:bg-purple-700">비밀번호 변경</button>
+              <div id="changepw-message" class="text-sm"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -518,6 +584,7 @@
     function updateAuthArea() {
       const area = $('#authArea');
       const adminBtn = $('#adminMenuBtn');
+      const mypageBtn = $('#mypageBtn');
       if (!area) return;
       
       // 관리자 메뉴 표시 여부 업데이트
@@ -526,6 +593,15 @@
           adminBtn.classList.remove('hidden');
         } else {
           adminBtn.classList.add('hidden');
+        }
+      }
+      
+      // 마이페이지 버튼 표시 여부 업데이트
+      if (mypageBtn) {
+        if (currentUser) {
+          mypageBtn.classList.remove('hidden');
+        } else {
+          mypageBtn.classList.add('hidden');
         }
       }
       
@@ -735,16 +811,24 @@
 
     // 섹션 전환
     function showSection(section) {
+      // 마이페이지 권한 확인
+      if (section === 'mypage' && !currentUser) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
       // 관리자 권한 확인
       if (section === 'admin' && (!currentUser || !currentUser.is_admin)) {
         alert('관리자만 접근할 수 있습니다.');
         return;
       }
       
-      ['companies', 'add-company', 'posts', 'admin'].forEach(s => {
-        $(`#${s}-section`).classList.add('hidden');
+      ['companies', 'add-company', 'posts', 'admin', 'mypage'].forEach(s => {
+        const el = $(`#${s}-section`);
+        if (el) el.classList.add('hidden');
       });
-      $(`#${section}-section`).classList.remove('hidden');
+      const targetSection = $(`#${section}-section`);
+      if (targetSection) targetSection.classList.remove('hidden');
       currentSection = section;
 
       if (section === 'companies') {
@@ -753,6 +837,8 @@
         loadPosts();
       } else if (section === 'admin') {
         loadAdminDashboard();
+      } else if (section === 'mypage') {
+        switchMypageTab('myinfo');
       }
     }
 
@@ -1935,6 +2021,178 @@
         updateHeadSeoMeta();
       }
     });
+
+    // 마이페이지 함수들
+    function switchMypageTab(tabName) {
+      // 모든 탭 콘텐츠 숨기기
+      document.querySelectorAll('.mypage-tab').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // 모든 탭 버튼 스타일 초기화
+      document.querySelectorAll('.mypage-tab-btn').forEach(btn => {
+        btn.classList.remove('border-purple-600', 'text-purple-600', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-gray-600');
+      });
+      
+      // 선택한 탭 표시
+      const selectedTab = $(`#mypage-${tabName}-tab`);
+      if (selectedTab) {
+        selectedTab.classList.remove('hidden');
+      }
+      
+      // 선택한 탭 버튼 스타일
+      const selectedBtn = document.querySelector(`.mypage-tab-btn[data-tab="${tabName}"]`);
+      if (selectedBtn) {
+        selectedBtn.classList.add('border-purple-600', 'text-purple-600', 'font-semibold');
+        selectedBtn.classList.remove('border-transparent', 'text-gray-600');
+      }
+      
+      // 탭별 데이터 로드
+      if (tabName === 'myinfo') {
+        loadMyInfo();
+      } else if (tabName === 'myposts') {
+        loadMyPosts();
+      } else if (tabName === 'mycomments') {
+        loadMyComments();
+      }
+    }
+
+    function loadMyInfo() {
+      if (!currentUser) return;
+      $('#myinfo-username').textContent = currentUser.username;
+      $('#myinfo-email').textContent = currentUser.email;
+      $('#myinfo-role').textContent = currentUser.is_admin ? '👑 관리자' : '일반 사용자';
+      $('#myinfo-joined').textContent = new Date(currentUser.created).toLocaleString();
+    }
+
+    async function loadMyPosts() {
+      try {
+        const res = await fetch('/api/mypage/posts', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const container = $('#mypage-posts-list');
+        if (!container) return;
+        
+        if (json.posts.length === 0) {
+          container.innerHTML = '<p class="text-gray-500">작성한 글이 없습니다.</p>';
+          return;
+        }
+
+        container.innerHTML = json.posts.map(post => `
+          <div class="bg-white p-4 border rounded hover:shadow">
+            <div class="flex justify-between items-start mb-2">
+              <h4 class="text-lg font-semibold text-gray-800">
+                <a href="javascript:showPostDetail(${post.id})" class="text-blue-600 hover:underline">
+                  ${escapeHtml(post.title)}
+                </a>
+              </h4>
+              <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${post.section}</span>
+            </div>
+            <p class="text-gray-600 text-sm mb-2">${escapeHtml(post.content.substring(0, 100))}...</p>
+            <div class="flex justify-between items-center text-xs text-gray-500">
+              <span>👁️ ${post.views || 0} | 💬 ${post.comment_count || 0}</span>
+              <span>${new Date(post.created).toLocaleString()}</span>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+        const container = $('#mypage-posts-list');
+        if (container) {
+          container.innerHTML = `<p class="text-red-500">글 목록 로드 실패: ${e.message}</p>`;
+        }
+      }
+    }
+
+    async function loadMyComments() {
+      try {
+        const res = await fetch('/api/mypage/comments', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const container = $('#mypage-comments-list');
+        if (!container) return;
+        
+        if (json.comments.length === 0) {
+          container.innerHTML = '<p class="text-gray-500">작성한 댓글이 없습니다.</p>';
+          return;
+        }
+
+        container.innerHTML = json.comments.map(comment => `
+          <div class="bg-white p-4 border rounded">
+            <div class="mb-2">
+              <p class="text-gray-700">${escapeHtml(comment.content)}</p>
+              <p class="text-xs text-gray-500 mt-1">
+                <a href="javascript:showPostDetail(${comment.post_id})" class="text-blue-600 hover:underline">
+                  게시글 보기
+                </a>
+              </p>
+            </div>
+            <div class="text-xs text-gray-500">
+              ${new Date(comment.created).toLocaleString()}
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+        const container = $('#mypage-comments-list');
+        if (container) {
+          container.innerHTML = `<p class="text-red-500">댓글 목록 로드 실패: ${e.message}</p>`;
+        }
+      }
+    }
+
+    async function changePassword() {
+      if (!currentUser) {
+        alert('로그인이 필요합니다.');
+        return;
+      }
+
+      const currentPw = $('#current-password')?.value || '';
+      const newPw = $('#new-password')?.value || '';
+      const confirmPw = $('#confirm-password')?.value || '';
+      const msgEl = $('#changepw-message');
+
+      if (!currentPw || !newPw || !confirmPw) {
+        if (msgEl) msgEl.innerHTML = '<span class="text-red-600">모든 필드를 입력해주세요.</span>';
+        return;
+      }
+
+      if (newPw !== confirmPw) {
+        if (msgEl) msgEl.innerHTML = '<span class="text-red-600">새 비밀번호가 일치하지 않습니다.</span>';
+        return;
+      }
+
+      if (newPw.length < 8) {
+        if (msgEl) msgEl.innerHTML = '<span class="text-red-600">새 비밀번호는 8자 이상이어야 합니다.</span>';
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/change-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            currentPassword: currentPw,
+            newPassword: newPw
+          }),
+          credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        if (msgEl) msgEl.innerHTML = '<span class="text-green-600">✅ 비밀번호가 변경되었습니다.</span>';
+        $('#current-password').value = '';
+        $('#new-password').value = '';
+        $('#confirm-password').value = '';
+      } catch (e) {
+        console.error(e);
+        if (msgEl) msgEl.innerHTML = `<span class="text-red-600">변경 실패: ${e.message}</span>`;
+      }
+    }
   </script>
 </body>
 </html>

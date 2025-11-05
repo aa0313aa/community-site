@@ -1063,6 +1063,13 @@ function requireAdmin(req, res, next) {
   next();
 }
 
+function requireAuth(req, res, next) {
+  if (!req.session.user) {
+    return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+  }
+  next();
+}
+
 // 모든 게시글 조회 (관리용)
 app.get('/api/admin/posts', requireAdmin, async (req, res) => {
   try {
@@ -1212,6 +1219,89 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
     res.json({ success: true, message: '회원이 삭제되었습니다.' });
   } catch (e) {
     console.error('회원 삭제 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 마이페이지: 내가 쓴 글 조회
+app.get('/api/mypage/posts', requireAuth, async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+    }
+    
+    const posts = await dbAll(`
+      SELECT id, title, content, category as section, views, created, 
+             (SELECT COUNT(*) FROM post_comments WHERE post_id = posts.id) AS comment_count
+      FROM posts
+      WHERE writer = ?
+      ORDER BY created DESC
+      LIMIT 100
+    `, [req.session.user.username]);
+    
+    res.json({ success: true, posts: posts || [] });
+  } catch (e) {
+    console.error('내 글 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 마이페이지: 내가 쓴 댓글 조회
+app.get('/api/mypage/comments', requireAuth, async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+    }
+    
+    const comments = await dbAll(`
+      SELECT id, post_id, content, created
+      FROM post_comments
+      WHERE writer = ?
+      ORDER BY created DESC
+      LIMIT 100
+    `, [req.session.user.username]);
+    
+    res.json({ success: true, comments: comments || [] });
+  } catch (e) {
+    console.error('내 댓글 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 마이페이지: 비밀번호 변경
+app.post('/api/change-password', requireAuth, async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+    }
+
+    const { currentPassword, newPassword } = req.body;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ success: false, error: '현재 비밀번호와 새 비밀번호를 모두 입력해주세요.' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ success: false, error: '새 비밀번호는 8자 이상이어야 합니다.' });
+    }
+
+    const user = await dbGet('SELECT id, password FROM users WHERE id = ?', [req.session.user.id]);
+    if (!user) {
+      return res.status(404).json({ success: false, error: '사용자를 찾을 수 없습니다.' });
+    }
+
+    // 현재 비밀번호 확인
+    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ success: false, error: '현재 비밀번호가 일치하지 않습니다.' });
+    }
+
+    // 새 비밀번호 해시화
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.session.user.id]);
+
+    res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
+  } catch (e) {
+    console.error('비밀번호 변경 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
   }
 });
