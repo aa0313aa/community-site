@@ -802,10 +802,23 @@
       } catch (e) {
         console.error(e);
       } finally {
+        // 인증 상태 초기화
         setAuthState(null);
-        if (currentSection === 'posts') {
-          loadPosts();
-        }
+
+        // 메인(업체목록)으로 전환
+        showSection('companies');
+
+        // URL을 홈으로 정리하고 메타 갱신
+        try {
+          // 상세 조회 쿼리 제거 및 루트로 정리
+          const currentUrl = new URL(window.location.href);
+          currentUrl.searchParams.delete('post');
+          currentUrl.searchParams.delete('company');
+          const newSearch = currentUrl.searchParams.toString();
+          const newPath = newSearch ? `${currentUrl.pathname}?${newSearch}` : '/';
+          window.history.replaceState(null, '', newPath);
+          updateHeadSeoMeta();
+        } catch (_) { /* noop */ }
       }
     }
 
