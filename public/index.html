@@ -95,6 +95,11 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- 브라우저 자동채움 유도용 더미 필드 (오프스크린) -->
+    <div aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;overflow:hidden">
+      <input type="text" name="username" autocomplete="username">
+      <input type="password" name="password" autocomplete="current-password">
+    </div>
     <!-- 업체 목록 섹션 -->
     <section id="companies-section" class="mb-8">
       <div class="flex justify-between items-center mb-4">
@@ -583,9 +588,16 @@
       // 로그인 직후 브라우저 자동완성으로 검색창에 아이디가 들어가는 문제 방지
       try {
         const searchEl = $('#searchInput');
-        if (searchEl && user && searchEl.value === user.username) {
-          searchEl.value = '';
-        }
+        const guard = () => {
+          if (!searchEl) return;
+          const username = (user && user.username) ? String(user.username) : '';
+          if (username && searchEl.value.trim().toLowerCase() === username.toLowerCase()) {
+            searchEl.value = '';
+          }
+        };
+        guard();
+        setTimeout(guard, 150);
+        setTimeout(guard, 600);
       } catch (_) { /* noop */ }
     }
 
@@ -1840,6 +1852,17 @@
           // 일부 브라우저 자동채움 방지: 잠깐 readonly 후 해제
           s.setAttribute('readonly', 'readonly');
           setTimeout(() => s.removeAttribute('readonly'), 200);
+          // 포커스/입력 시에도 사용자아이디 자동삽입 감지되면 비우기
+          const cleanIfUsername = () => {
+            try {
+              const username = (currentUser && currentUser.username) ? String(currentUser.username) : '';
+              if (username && s.value.trim().toLowerCase() === username.toLowerCase()) {
+                s.value = '';
+              }
+            } catch(_) {}
+          };
+          s.addEventListener('focus', cleanIfUsername);
+          s.addEventListener('input', cleanIfUsername);
         }
       } catch (_) { /* noop */ }
 
