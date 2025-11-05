@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 const session = require('express-session');
@@ -15,9 +16,24 @@ app.set('trust proxy', 1);
 // 자유게시판 카테고리 (향후 확장 가능)
 const POST_CATEGORIES = ['free'];
 
-// DB
-const DB_FILE = path.join(__dirname, 'community.db');
-const db = new sqlite3.Database(DB_FILE);
+// DB (환경변수로 경로 지정 가능: DB_FILE)
+// 예) Render 디스크 사용 시: DB_FILE=/var/data/community.db
+const RESOLVED_DB_FILE = process.env.DB_FILE && process.env.DB_FILE.trim().length > 0
+  ? process.env.DB_FILE.trim()
+  : path.join(__dirname, 'community.db');
+
+// DB 파일 디렉터리가 없으면 생성 (예: /var/data)
+try {
+  const dir = path.dirname(RESOLVED_DB_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('DB 디렉터리 생성 경고:', e.message);
+}
+
+console.log(`[DB] Using SQLite file: ${RESOLVED_DB_FILE}`);
+const db = new sqlite3.Database(RESOLVED_DB_FILE);
 
 db.serialize(() => {
   // 기존 게시글 테이블

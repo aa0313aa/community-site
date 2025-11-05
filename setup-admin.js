@@ -1,8 +1,22 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
+const fs = require('fs');
 
-const DB_FILE = path.join(__dirname, 'community.db');
-const db = new sqlite3.Database(DB_FILE);
+const RESOLVED_DB_FILE = process.env.DB_FILE && process.env.DB_FILE.trim().length > 0
+  ? process.env.DB_FILE.trim()
+  : path.join(__dirname, 'community.db');
+
+try {
+  const dir = path.dirname(RESOLVED_DB_FILE);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+} catch (e) {
+  console.warn('DB 디렉터리 생성 경고:', e.message);
+}
+
+console.log(`[DB] Using SQLite file: ${RESOLVED_DB_FILE}`);
+const db = new sqlite3.Database(RESOLVED_DB_FILE);
 
 // 'aa0313' 사용자를 관리자로 설정
 db.run(`UPDATE users SET is_admin = 1 WHERE username = 'aa0313'`, function(err) {
