@@ -87,6 +87,24 @@ Render 같은 호스팅 환경은 기본 파일시스템이 배포/재시작 시
 
 개발 환경에서는 별도 설정이 없으면 프로젝트 폴더의 `community.db` 파일을 사용합니다. 배포 환경에서는 `DB_FILE` 환경변수를 설정해 주십시오.
 
+### 비용 없이(무료) 데이터 유지하는 방법
+
+이 앱은 `DATABASE_URL`이 설정되어 있으면 자동으로 PostgreSQL에 연결합니다. 무료 티어를 제공하는 외부 Postgres를 사용하면 비용 없이 데이터를 영구 저장할 수 있습니다.
+
+예: Neon(PostgreSQL, Free Tier)
+- Neon에서 무료 프로젝트 생성 → Connection string 복사
+- Render(또는 배포 환경) 환경변수에 `DATABASE_URL` 추가
+	- 예) `DATABASE_URL=postgres://USER:PASSWORD@HOST:PORT/DB?sslmode=require`
+- 재배포 → 서버 로그에 `[DB] Using PostgreSQL:`가 보이면 성공
+
+SSL 설정
+- 일부 제공자(Neon/Supabase 등)는 SSL이 필요할 수 있습니다
+- 연결 오류 시 환경변수 `PGSSL=require`를 추가해 주세요
+
+참고
+- `DATABASE_URL`이 있으면 Postgres, 없으면 SQLite를 사용합니다
+- Postgres 사용 시 별도의 디스크는 필요 없습니다
+
 ## �📊 데이터베이스 구조
 
 ### companies 테이블

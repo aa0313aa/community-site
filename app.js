@@ -1,6 +1,7 @@
 const express = require('express');
 const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
+const { Pool: PgPool } = require('pg');
 const fs = require('fs');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -16,155 +17,281 @@ app.set('trust proxy', 1);
 // 자유게시판 카테고리 (향후 확장 가능)
 const POST_CATEGORIES = ['free'];
 
-// DB (환경변수로 경로 지정 가능: DB_FILE)
-// 예) Render 디스크 사용 시: DB_FILE=/var/data/community.db
-const RESOLVED_DB_FILE = process.env.DB_FILE && process.env.DB_FILE.trim().length > 0
-  ? process.env.DB_FILE.trim()
-  : path.join(__dirname, 'community.db');
+// DB 선택: DATABASE_URL이 있으면 Postgres, 없으면 SQLite
+const DATABASE_URL = process.env.DATABASE_URL && process.env.DATABASE_URL.trim();
+const usePg = !!DATABASE_URL;
 
-// DB 파일 디렉터리가 없으면 생성 (예: /var/data)
-try {
-  const dir = path.dirname(RESOLVED_DB_FILE);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
+let db;            // sqlite3 Database instance (if SQLite)
+let pgPool = null; // pg Pool (if Postgres)
+let dbKind = usePg ? 'postgres' : 'sqlite';
+
+if (usePg) {
+  // Postgres
+  pgPool = new PgPool({ connectionString: DATABASE_URL, ssl: process.env.PGSSL === 'require' ? { rejectUnauthorized: false } : undefined });
+  console.log(`[DB] Using PostgreSQL: ${DATABASE_URL.replace(/:[^:@/]+@/, '://***:***@')}`);
+} else {
+  // SQLite (환경변수로 경로 지정 가능: DB_FILE)
+  // 예) Render 디스크 사용 시: DB_FILE=/var/data/community.db
+  const RESOLVED_DB_FILE = process.env.DB_FILE && process.env.DB_FILE.trim().length > 0
+    ? process.env.DB_FILE.trim()
+    : path.join(__dirname, 'community.db');
+
+  // DB 파일 디렉터리가 없으면 생성 (예: /var/data)
+  try {
+    const dir = path.dirname(RESOLVED_DB_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+  } catch (e) {
+    console.warn('DB 디렉터리 생성 경고:', e.message);
   }
-} catch (e) {
-  console.warn('DB 디렉터리 생성 경고:', e.message);
+
+  console.log(`[DB] Using SQLite file: ${RESOLVED_DB_FILE}`);
+  db = new sqlite3.Database(RESOLVED_DB_FILE);
 }
 
-console.log(`[DB] Using SQLite file: ${RESOLVED_DB_FILE}`);
-const db = new sqlite3.Database(RESOLVED_DB_FILE);
+// SQL 헬퍼: '?'-placeholder를 Postgres의 $1, $2... 로 변환
+function toPgParams(sql) {
+  const parts = String(sql || '').split('?');
+  if (parts.length === 1) return sql;
+  let out = parts[0];
+  for (let i = 1; i < parts.length; i++) {
+    out += `$${i}` + parts[i];
+  }
+  return out;
+}
 
-db.serialize(() => {
-  // 기존 게시글 테이블
-  db.run(`CREATE TABLE IF NOT EXISTS posts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    content TEXT,
-    category TEXT DEFAULT 'free',
-    writer TEXT,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
+async function pgQuery(sql, params = []) {
+  const mapped = toPgParams(sql);
+  const res = await pgPool.query(mapped, params);
+  return res;
+}
 
-  // 기존 DB에 category 컬럼이 없다면 추가 (한 번만 실행됨)
-  db.run(`ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'free'`, (err) => {
-    if (err && !String(err.message || '').includes('duplicate column name')) {
-      console.error('posts 테이블 category 컬럼 추가 실패:', err.message);
-    }
+// 통합 DB 유틸
+async function dbGet(sql, params = []) {
+  if (usePg) {
+    const r = await pgQuery(sql, params);
+    return r.rows[0] || null;
+  }
+  return new Promise((resolve, reject) => {
+    db.get(sql, params, (err, row) => {
+      if (err) return reject(err);
+      resolve(row || null);
+    });
   });
+}
 
-  // 회원 테이블
-  db.run(`CREATE TABLE IF NOT EXISTS users (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE NOT NULL,
-    username TEXT UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
-    is_admin INTEGER DEFAULT 0,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  db.run(`ALTER TABLE users ADD COLUMN email TEXT`, (err) => {
-    if (err && !String(err.message || '').includes('duplicate column name')) {
-      console.error('users 테이블 email 컬럼 추가 실패:', err.message);
-    }
+async function dbAll(sql, params = []) {
+  if (usePg) {
+    const r = await pgQuery(sql, params);
+    return r.rows || [];
+  }
+  return new Promise((resolve, reject) => {
+    db.all(sql, params, (err, rows) => {
+      if (err) return reject(err);
+      resolve(rows || []);
+    });
   });
+}
 
-  db.run(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`, (err) => {
-    if (err && !String(err.message || '').includes('duplicate column name')) {
-      console.error('users 테이블 is_admin 컬럼 추가 실패:', err.message);
+async function dbRun(sql, params = []) {
+  if (usePg) {
+    // INSERT인 경우 id를 반환하도록 RETURNING 추가 (이미 포함돼 있지 않다면)
+    let q = sql;
+    const isInsert = /^\s*insert\s+/i.test(q);
+    const hasReturning = /returning\s+\w+/i.test(q);
+    if (isInsert && !hasReturning) {
+      q = `${q} RETURNING id`;
     }
+    const r = await pgQuery(q, params);
+    const lastID = isInsert ? (r.rows && r.rows[0] && (r.rows[0].id || r.rows[0].lastID)) : undefined;
+    return { lastID, changes: r.rowCount };
+  }
+  return new Promise((resolve, reject) => {
+    db.run(sql, params, function (err) {
+      if (err) return reject(err);
+      resolve({ lastID: this.lastID, changes: this.changes });
+    });
   });
+}
 
-  db.run(`CREATE TABLE IF NOT EXISTS password_resets (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    token_hash TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
-  )`);
-
-  // 업체 정보 테이블
-  db.run(`CREATE TABLE IF NOT EXISTS companies (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    category TEXT NOT NULL, -- 'payment'(소액결제) | 'credit'(신용카드) | 'scam'(사기사이트) | 'other'(기타)
-    type TEXT NOT NULL,     -- 'safe'(정상업체) | 'fraud'(사기업체) | 'other'(기타)
-    website TEXT,
-    phone TEXT,
-    messenger TEXT,
-    messenger_id TEXT,
-    description TEXT,
-    rating INTEGER DEFAULT 0, -- 1-5 별점
-    report_count INTEGER DEFAULT 0,
-    writer TEXT,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP
-  )`);
-
-  // 업체 리뷰/신고 테이블
-  db.run(`CREATE TABLE IF NOT EXISTS company_reviews (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    company_id INTEGER,
-    review_type TEXT NOT NULL, -- 'review' (리뷰) 또는 'report' (신고)
-    rating INTEGER,            -- 1-5 별점 (리뷰인 경우)
-    content TEXT,
-    writer TEXT,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(company_id) REFERENCES companies(id)
-  )`);
-
-  db.run(`CREATE TABLE IF NOT EXISTS post_comments (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    post_id INTEGER NOT NULL,
-    content TEXT NOT NULL,
-    writer TEXT,
-    created DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
-  )`);
-
-  // 기존 테이블에 메신저 필드 추가 (있으면 무시)
-  db.run(`ALTER TABLE companies ADD COLUMN messenger TEXT`, (err) => {
-    if (err && !String(err.message || '').includes('duplicate column name')) {
-      console.error('companies 테이블 messenger 컬럼 추가 실패:', err.message);
+async function safeAlter(sql) {
+  try {
+    await dbRun(sql);
+  } catch (e) {
+    const msg = String(e && e.message || '');
+    if (msg.includes('duplicate column') || msg.includes('already exists')) {
+      // ignore
+      console.warn('ALTER 무시(이미 존재):', sql);
+    } else {
+      throw e;
     }
-  });
+  }
+}
 
-  db.run(`ALTER TABLE companies ADD COLUMN messenger_id TEXT`, (err) => {
-    if (err && !String(err.message || '').includes('duplicate column name')) {
-      console.error('companies 테이블 messenger_id 컬럼 추가 실패:', err.message);
+// DB 초기화 (SQLite/PG 공용)
+(async function initDb() {
+  try {
+    if (usePg) {
+      // Postgres 스키마
+      await dbRun(`CREATE TABLE IF NOT EXISTS posts (
+        id SERIAL PRIMARY KEY,
+        title TEXT,
+        content TEXT,
+        category TEXT DEFAULT 'free',
+        writer TEXT,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+  await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'free'`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_admin INTEGER DEFAULT 0,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+  await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT`);
+  await safeAlter(`ALTER TABLE users ADD COLUMN IF NOT EXISTS is_admin INTEGER DEFAULT 0`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token_hash TEXT NOT NULL,
+        expires_at TIMESTAMP NOT NULL,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS companies (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        type TEXT NOT NULL,
+        website TEXT,
+        phone TEXT,
+        messenger TEXT,
+        messenger_id TEXT,
+        description TEXT,
+        rating INTEGER DEFAULT 0,
+        report_count INTEGER DEFAULT 0,
+        writer TEXT,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS company_reviews (
+        id SERIAL PRIMARY KEY,
+        company_id INTEGER REFERENCES companies(id),
+        review_type TEXT NOT NULL,
+        rating INTEGER,
+        content TEXT,
+        writer TEXT,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS post_comments (
+        id SERIAL PRIMARY KEY,
+        post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+        content TEXT NOT NULL,
+        writer TEXT,
+        created TIMESTAMP DEFAULT NOW()
+      )`);
+
+  await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS messenger TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS messenger_id TEXT`);
+    } else {
+      // SQLite 스키마
+      await dbRun(`CREATE TABLE IF NOT EXISTS posts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        content TEXT,
+        category TEXT DEFAULT 'free',
+        writer TEXT,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+  await safeAlter(`ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'free'`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        email TEXT UNIQUE NOT NULL,
+        username TEXT UNIQUE NOT NULL,
+        password_hash TEXT NOT NULL,
+        is_admin INTEGER DEFAULT 0,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+  await safeAlter(`ALTER TABLE users ADD COLUMN email TEXT`);
+  await safeAlter(`ALTER TABLE users ADD COLUMN is_admin INTEGER DEFAULT 0`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS password_resets (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token_hash TEXT NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS companies (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        category TEXT NOT NULL,
+        type TEXT NOT NULL,
+        website TEXT,
+        phone TEXT,
+        messenger TEXT,
+        messenger_id TEXT,
+        description TEXT,
+        rating INTEGER DEFAULT 0,
+        report_count INTEGER DEFAULT 0,
+        writer TEXT,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS company_reviews (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        company_id INTEGER,
+        review_type TEXT NOT NULL,
+        rating INTEGER,
+        content TEXT,
+        writer TEXT,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(company_id) REFERENCES companies(id)
+      )`);
+
+      await dbRun(`CREATE TABLE IF NOT EXISTS post_comments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        writer TEXT,
+        created DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(post_id) REFERENCES posts(id) ON DELETE CASCADE
+      )`);
+
+  await safeAlter(`ALTER TABLE companies ADD COLUMN messenger TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN messenger_id TEXT`);
     }
-  });
 
-  // 🔐 기본 관리자 계정 자동 생성 (처음 한 번만)
-  const bcrypt = require('bcryptjs');
-  const adminUsername = 'admin';
-  const adminEmail = 'admin@community.com';
-  const adminPassword = 'Admin@123456'; // 기본 비밀번호
+    // 🔐 기본 관리자 계정 자동 생성 (처음 한 번만)
+    const adminUsername = 'admin';
+    const adminEmail = 'admin@community.com';
+    const adminPassword = 'Admin@123456';
 
-  db.get('SELECT id FROM users WHERE username = ?', [adminUsername], (err, row) => {
-    if (err) return console.error('관리자 확인 오류:', err.message);
-    
-    if (!row) {
-      // 관리자가 없으면 생성
+    const exists = await dbGet('SELECT id FROM users WHERE username = ?', [adminUsername]);
+    if (!exists) {
       const hash = bcrypt.hashSync(adminPassword, 10);
-      db.run(
-        'INSERT INTO users (username, email, password_hash, is_admin) VALUES (?,?,?,?)',
-        [adminUsername, adminEmail, hash, 1],
-        (err) => {
-          if (err) {
-            console.error('관리자 계정 생성 실패:', err.message);
-          } else {
-            console.log('✅ 기본 관리자 계정 자동 생성:');
-            console.log(`   아이디: ${adminUsername}`);
-            console.log(`   이메일: ${adminEmail}`);
-            console.log(`   비밀번호: ${adminPassword}`);
-            console.log('   ⚠️ 처음 로그인 후 비밀번호를 변경해주세요!');
-          }
-        }
-      );
+      await dbRun('INSERT INTO users (username, email, password_hash, is_admin) VALUES (?,?,?,?)', [adminUsername, adminEmail, hash, 1]);
+      console.log('✅ 기본 관리자 계정 자동 생성:');
+      console.log(`   아이디: ${adminUsername}`);
+      console.log(`   이메일: ${adminEmail}`);
+      console.log(`   비밀번호: ${adminPassword}`);
+      console.log('   ⚠️ 처음 로그인 후 비밀번호를 변경해주세요!');
     }
-  });
-});
+  } catch (e) {
+    console.error('DB 초기화 오류:', e);
+  }
+})();
 
 app.use(cors());
 app.use(bodyParser.json({ limit: '1mb' }));
@@ -229,32 +356,7 @@ function comparePassword(password, hash) {
   });
 }
 
-function dbGet(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.get(sql, params, (err, row) => {
-      if (err) return reject(err);
-      resolve(row);
-    });
-  });
-}
-
-function dbRun(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.run(sql, params, function (err) {
-      if (err) return reject(err);
-      resolve(this);
-    });
-  });
-}
-
-function dbAll(sql, params = []) {
-  return new Promise((resolve, reject) => {
-    db.all(sql, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows || []);
-    });
-  });
-}
+// dbGet/dbRun/dbAll는 상단의 통합 유틸을 사용합니다.
 
 function escapeHtml(value) {
   return String(value || '')
@@ -658,66 +760,68 @@ ${entries.map((entry) => `  <url>
   }
 });
 
-app.get('/api/posts', (req, res) => {
-  const category = sanitize(req.query.category || '').toLowerCase();
-  let query = `SELECT p.id, p.title, p.content, p.category, p.writer, p.created,
-    (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comment_count
-    FROM posts p`;
-  const params = [];
+app.get('/api/posts', async (req, res) => {
+  try {
+    const category = sanitize(req.query.category || '').toLowerCase();
+    let query = `SELECT p.id, p.title, p.content, p.category, p.writer, p.created,
+      (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comment_count
+      FROM posts p`;
+    const params = [];
 
-  if (category && POST_CATEGORIES.includes(category)) {
-    query += ' WHERE p.category = ?';
-    params.push(category);
-  }
-
-  query += ' ORDER BY p.id DESC LIMIT 200';
-
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
-    res.json({ success: true, posts: rows || [] });
-  });
-});
-
-app.post('/api/posts', (req, res) => {
-  if (!req.session.user) {
-    return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
-  }
-
-  const title = sanitize(req.body.title || '').slice(0, 120) || '(제목 없음)';
-  const content = sanitize(req.body.content || '', 8000);
-  const categoryRaw = sanitize(req.body.category || 'free', 20).toLowerCase();
-  const category = POST_CATEGORIES.includes(categoryRaw) ? categoryRaw : 'free';
-  const writer = req.session.user.username;
-  if (!content) return res.json({ success: false, error: '내용이 비어 있습니다' });
-  db.run('INSERT INTO posts (title, content, category, writer) VALUES (?,?,?,?)', [title, content, category, writer], function (err) {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
-    res.json({ success: true, id: this.lastID });
-  });
-});
-
-app.get('/api/posts/:id', (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (Number.isNaN(id)) {
-    return res.status(400).json({ success: false, error: '잘못된 게시글 ID' });
-  }
-
-  db.get('SELECT id, title, content, category, writer, created FROM posts WHERE id = ?', [id], (err, row) => {
-    if (err) {
-      console.error('게시글 조회 오류', err);
-      return res.status(500).json({ success: false, error: 'DB 오류' });
+    if (category && POST_CATEGORIES.includes(category)) {
+      query += ' WHERE p.category = ?';
+      params.push(category);
     }
+
+    query += ' ORDER BY p.id DESC LIMIT 200';
+
+    const rows = await dbAll(query, params);
+    res.json({ success: true, posts: rows || [] });
+  } catch (err) {
+    console.error('게시글 목록 조회 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
+});
+
+app.post('/api/posts', async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+    }
+
+    const title = sanitize(req.body.title || '').slice(0, 120) || '(제목 없음)';
+    const content = sanitize(req.body.content || '', 8000);
+    const categoryRaw = sanitize(req.body.category || 'free', 20).toLowerCase();
+    const category = POST_CATEGORIES.includes(categoryRaw) ? categoryRaw : 'free';
+    const writer = req.session.user.username;
+    if (!content) return res.json({ success: false, error: '내용이 비어 있습니다' });
+
+    const r = await dbRun('INSERT INTO posts (title, content, category, writer) VALUES (?,?,?,?)', [title, content, category, writer]);
+    res.json({ success: true, id: r.lastID });
+  } catch (err) {
+    console.error('게시글 등록 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
+});
+
+app.get('/api/posts/:id', async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ success: false, error: '잘못된 게시글 ID' });
+    }
+
+    const row = await dbGet('SELECT id, title, content, category, writer, created FROM posts WHERE id = ?', [id]);
     if (!row) {
       return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
     }
 
-    db.all('SELECT id, post_id, content, writer, created FROM post_comments WHERE post_id = ? ORDER BY id ASC', [id], (cErr, comments) => {
-      if (cErr) {
-        console.error('게시글 댓글 조회 오류', cErr);
-        return res.status(500).json({ success: false, error: '댓글을 불러오지 못했습니다.' });
-      }
-      res.json({ success: true, post: row, comments: comments || [] });
-    });
-  });
+    const comments = await dbAll('SELECT id, post_id, content, writer, created FROM post_comments WHERE post_id = ? ORDER BY id ASC', [id]);
+    res.json({ success: true, post: row, comments: comments || [] });
+  } catch (err) {
+    console.error('게시글 조회 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
 });
 
 app.post('/api/posts/:id/comments', async (req, res) => {
@@ -755,109 +859,116 @@ app.post('/api/posts/:id/comments', async (req, res) => {
 });
 
 // 업체 목록 조회
-app.get('/api/companies', (req, res) => {
-  const { category, type, search } = req.query;
-  let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created FROM companies';
-  let params = [];
-  let conditions = [];
+app.get('/api/companies', async (req, res) => {
+  try {
+    const { category, type, search } = req.query;
+    let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created FROM companies';
+    const params = [];
+    const conditions = [];
 
-  if (category) {
-    conditions.push('category = ?');
-    params.push(category);
-  }
-  if (type) {
-    conditions.push('type = ?');
-    params.push(type);
-  }
-  if (search) {
-    conditions.push('(name LIKE ? OR description LIKE ?)');
-    params.push(`%${search}%`, `%${search}%`);
-  }
+    if (category) {
+      conditions.push('category = ?');
+      params.push(category);
+    }
+    if (type) {
+      conditions.push('type = ?');
+      params.push(type);
+    }
+    if (search) {
+      // Postgres에서는 ILIKE로 변경하면 대소문자 무시 검색이 됩니다. 간단히 LIKE 유지.
+      conditions.push('(name LIKE ? OR description LIKE ?)');
+      params.push(`%${search}%`, `%${search}%`);
+    }
 
-  if (conditions.length > 0) {
-    query += ' WHERE ' + conditions.join(' AND ');
-  }
-  query += ' ORDER BY created DESC LIMIT 100';
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+    query += ' ORDER BY created DESC LIMIT 100';
 
-  db.all(query, params, (err, rows) => {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
+    const rows = await dbAll(query, params);
     res.json({ success: true, companies: rows || [] });
-  });
+  } catch (err) {
+    console.error('업체 목록 조회 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
 });
 
 // 업체 등록
-app.post('/api/companies', (req, res) => {
-  const name = sanitize(req.body.name || '').slice(0, 100);
-  const category = req.body.category; // 'payment' | 'credit' | 'scam' | 'other'
-  const type = req.body.type; // 'safe' | 'fraud' | 'other'
-  const website = sanitize(req.body.website || '').slice(0, 200);
-  const phone = sanitize(req.body.phone || '').slice(0, 50);
-  const messenger = sanitize(req.body.messenger || '').slice(0, 50);
-  const messenger_id = sanitize(req.body.messenger_id || '').slice(0, 100);
-  const description = sanitize(req.body.description || '', 1000);
-  const rating = parseInt(req.body.rating) || 0;
-  const writer = sanitize(req.body.writer || '익명', 40) || '익명';
+app.post('/api/companies', async (req, res) => {
+  try {
+    const name = sanitize(req.body.name || '').slice(0, 100);
+    const category = req.body.category; // 'payment' | 'credit' | 'scam' | 'other'
+    const type = req.body.type; // 'safe' | 'fraud' | 'other'
+    const website = sanitize(req.body.website || '').slice(0, 200);
+    const phone = sanitize(req.body.phone || '').slice(0, 50);
+    const messenger = sanitize(req.body.messenger || '').slice(0, 50);
+    const messenger_id = sanitize(req.body.messenger_id || '').slice(0, 100);
+    const description = sanitize(req.body.description || '', 1000);
+    const rating = parseInt(req.body.rating) || 0;
+    const writer = sanitize(req.body.writer || '익명', 40) || '익명';
 
-  if (!name || !category || !type) {
-    return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
-  }
-  if (!['payment', 'credit', 'scam', 'other'].includes(category)) {
-    return res.json({ success: false, error: '잘못된 카테고리입니다' });
-  }
-  if (!['safe', 'fraud', 'other'].includes(type)) {
-    return res.json({ success: false, error: '잘못된 업체 분류입니다' });
-  }
+    if (!name || !category || !type) {
+      return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
+    }
+    if (!['payment', 'credit', 'scam', 'other'].includes(category)) {
+      return res.json({ success: false, error: '잘못된 카테고리입니다' });
+    }
+    if (!['safe', 'fraud', 'other'].includes(type)) {
+      return res.json({ success: false, error: '잘못된 업체 분류입니다' });
+    }
 
-  db.run('INSERT INTO companies (name, category, type, website, phone, messenger, messenger_id, description, rating, writer) VALUES (?,?,?,?,?,?,?,?,?,?)', 
-    [name, category, type, website, phone, messenger, messenger_id, description, rating, writer], function (err) {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
-    res.json({ success: true, id: this.lastID });
-  });
+    const r = await dbRun('INSERT INTO companies (name, category, type, website, phone, messenger, messenger_id, description, rating, writer) VALUES (?,?,?,?,?,?,?,?,?,?)', 
+      [name, category, type, website, phone, messenger, messenger_id, description, rating, writer]);
+    res.json({ success: true, id: r.lastID });
+  } catch (err) {
+    console.error('업체 등록 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
 });
 
 // 업체 상세 정보 조회
-app.get('/api/companies/:id', (req, res) => {
-  const companyId = parseInt(req.params.id);
-  if (!companyId) return res.status(400).json({ success: false, error: '잘못된 업체 ID' });
+app.get('/api/companies/:id', async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id, 10);
+    if (!companyId) return res.status(400).json({ success: false, error: '잘못된 업체 ID' });
 
-  db.get('SELECT * FROM companies WHERE id = ?', [companyId], (err, company) => {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
+    const company = await dbGet('SELECT * FROM companies WHERE id = ?', [companyId]);
     if (!company) return res.status(404).json({ success: false, error: '업체를 찾을 수 없습니다' });
 
-    // 리뷰도 함께 조회
-    db.all('SELECT * FROM company_reviews WHERE company_id = ? ORDER BY created DESC', [companyId], (err, reviews) => {
-      if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
-      res.json({ success: true, company, reviews: reviews || [] });
-    });
-  });
+    const reviews = await dbAll('SELECT * FROM company_reviews WHERE company_id = ? ORDER BY created DESC', [companyId]);
+    res.json({ success: true, company, reviews: reviews || [] });
+  } catch (err) {
+    console.error('업체 상세 조회 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
 });
 
 // 업체 리뷰/신고 등록
-app.post('/api/companies/:id/reviews', (req, res) => {
-  const companyId = parseInt(req.params.id);
-  const reviewType = req.body.review_type; // 'review' or 'report'
-  const rating = parseInt(req.body.rating) || null;
-  const content = sanitize(req.body.content || '', 1000);
-  const writer = sanitize(req.body.writer || '익명', 40) || '익명';
+app.post('/api/companies/:id/reviews', async (req, res) => {
+  try {
+    const companyId = parseInt(req.params.id, 10);
+    const reviewType = req.body.review_type; // 'review' or 'report'
+    const rating = parseInt(req.body.rating) || null;
+    const content = sanitize(req.body.content || '', 1000);
+    const writer = sanitize(req.body.writer || '익명', 40) || '익명';
 
-  if (!companyId || !reviewType || !content) {
-    return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
-  }
-  if (!['review', 'report'].includes(reviewType)) {
-    return res.json({ success: false, error: '잘못된 리뷰 타입입니다' });
-  }
-
-  db.run('INSERT INTO company_reviews (company_id, review_type, rating, content, writer) VALUES (?,?,?,?,?)', 
-    [companyId, reviewType, rating, content, writer], function (err) {
-    if (err) return res.status(500).json({ success: false, error: 'DB 오류' });
-    
-    // 신고 수 업데이트
-    if (reviewType === 'report') {
-      db.run('UPDATE companies SET report_count = report_count + 1 WHERE id = ?', [companyId]);
+    if (!companyId || !reviewType || !content) {
+      return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
     }
-    
-    res.json({ success: true, id: this.lastID });
-  });
+    if (!['review', 'report'].includes(reviewType)) {
+      return res.json({ success: false, error: '잘못된 리뷰 타입입니다' });
+    }
+
+    const r = await dbRun('INSERT INTO company_reviews (company_id, review_type, rating, content, writer) VALUES (?,?,?,?,?)', 
+      [companyId, reviewType, rating, content, writer]);
+    if (reviewType === 'report') {
+      await dbRun('UPDATE companies SET report_count = report_count + 1 WHERE id = ?', [companyId]);
+    }
+    res.json({ success: true, id: r.lastID });
+  } catch (err) {
+    console.error('업체 리뷰/신고 등록 오류', err);
+    res.status(500).json({ success: false, error: 'DB 오류' });
+  }
 });
 
 app.get('/companies/:id', async (req, res) => {
