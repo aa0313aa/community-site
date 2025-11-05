@@ -4,12 +4,15 @@ const path = require('path');
 const DB_FILE = path.join(__dirname, 'community.db');
 const db = new sqlite3.Database(DB_FILE);
 
-// 첫 번째 사용자를 관리자로 설정
-db.run(`UPDATE users SET is_admin = 1 WHERE id = (SELECT MIN(id) FROM users)`, function(err) {
+// 'aa0313' 사용자를 관리자로 설정
+db.run(`UPDATE users SET is_admin = 1 WHERE username = 'aa0313'`, function(err) {
   if (err) {
     console.error('관리자 설정 실패:', err.message);
+  } else if (this.changes === 0) {
+    console.log('⚠️ 경고: aa0313 사용자를 찾을 수 없습니다.');
+    console.log('먼저 aa0313으로 회원가입을 해주세요.');
   } else {
-    console.log('첫 번째 사용자가 관리자로 설정되었습니다.');
+    console.log('✅ aa0313 사용자가 관리자로 설정되었습니다.');
   }
   
   // 설정 후 모든 사용자 조회
