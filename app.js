@@ -118,6 +118,36 @@ db.serialize(() => {
       console.error('companies 테이블 messenger_id 컬럼 추가 실패:', err.message);
     }
   });
+
+  // 🔐 기본 관리자 계정 자동 생성 (처음 한 번만)
+  const bcrypt = require('bcryptjs');
+  const adminUsername = 'admin';
+  const adminEmail = 'admin@community.com';
+  const adminPassword = 'Admin@123456'; // 기본 비밀번호
+
+  db.get('SELECT id FROM users WHERE username = ?', [adminUsername], (err, row) => {
+    if (err) return console.error('관리자 확인 오류:', err.message);
+    
+    if (!row) {
+      // 관리자가 없으면 생성
+      const hash = bcrypt.hashSync(adminPassword, 10);
+      db.run(
+        'INSERT INTO users (username, email, password_hash, is_admin) VALUES (?,?,?,?)',
+        [adminUsername, adminEmail, hash, 1],
+        (err) => {
+          if (err) {
+            console.error('관리자 계정 생성 실패:', err.message);
+          } else {
+            console.log('✅ 기본 관리자 계정 자동 생성:');
+            console.log(`   아이디: ${adminUsername}`);
+            console.log(`   이메일: ${adminEmail}`);
+            console.log(`   비밀번호: ${adminPassword}`);
+            console.log('   ⚠️ 처음 로그인 후 비밀번호를 변경해주세요!');
+          }
+        }
+      );
+    }
+  });
 });
 
 app.use(cors());
