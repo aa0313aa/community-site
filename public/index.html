@@ -1,0 +1,1940 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>소액결제 · 신용카드 정상,사기업체 정보 커뮤니티</title>
+  <meta name="description" content="소액결제 및 신용카드 업체들의 정상/사기 정보를 공유하는 커뮤니티. 안전한 거래를 위해 실제 사용자 정보 공유" />
+  <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+  <meta name="keywords" content="소액결제, 신용카드, 정상업체, 사기업체, 업체 리뷰, 사기 신고, 커뮤니티, 업체정보, 사기사이트" />
+  <meta name="author" content="사기 업체정보 커뮤니티" />
+  <meta name="theme-color" content="#1d4ed8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="format-detection" content="telephone=no" />
+  
+  <!-- 검색 엔진 최적화 -->
+  <link id="canonicalLink" rel="canonical" href="https://example.com/" />
+  <link id="alternateKo" rel="alternate" hreflang="ko" href="https://example.com/" />
+  <link id="alternateDefault" rel="alternate" hreflang="x-default" href="https://example.com/" />
+  
+  <!-- Open Graph / Facebook -->
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="ko_KR" />
+  <meta property="og:site_name" content="업체정보 커뮤니티" />
+  <meta property="og:title" content="소액결제 · 신용카드 업체 정보 커뮤니티" />
+  <meta property="og:description" content="정상 업체와 사기업체 정보를 실시간으로 공유하고 검증하는 커뮤니티" />
+  <meta property="og:url" content="https://example.com/" />
+  <meta property="og:image" content="https://via.placeholder.com/1200x630.png?text=%F0%9F%92%B3+Community" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:type" content="image/png" />
+  
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="소액결제 · 신용카드 업체 정보 커뮤니티" />
+  <meta name="twitter:description" content="정상 업체와 사기업체 정보를 실시간으로 공유하고 검증하는 커뮤니티" />
+  <meta name="twitter:url" content="https://example.com/" />
+  <meta name="twitter:image" content="https://via.placeholder.com/1200x630.png?text=%F0%9F%92%B3+Community" />
+  <meta name="twitter:creator" content="@community" />
+  
+  <!-- 검색 엔진 메타 -->
+  <meta name="language" content="Korean" />
+  <meta name="revisit-after" content="7 days" />
+  <meta name="rating" content="general" />
+  <meta name="distribution" content="global" />
+  
+  <!-- Preconnect for Performance -->
+  <link rel="preconnect" href="https://cdn.tailwindcss.com" />
+  <link rel="dns-prefetch" href="https://cdn.tailwindcss.com" />
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-900">
+  <header class="bg-white border-b shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 py-4">
+        <div>
+          <h1 class="text-2xl font-bold text-blue-600">💳 업체정보 커뮤니티</h1>
+        </div>
+        <div class="flex flex-wrap items-center gap-3">
+          <nav class="space-x-2 text-sm">
+            <button onclick="showSection('companies')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">업체목록</button>
+            <button onclick="showSection('add-company')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">업체등록</button>
+            <button onclick="showSection('posts')" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">자유게시판</button>
+            <a href="/trending" class="inline-block px-4 py-2 border border-blue-300 text-blue-600 rounded hover:bg-blue-50">사기 정보 공유</a>
+            <button id="adminMenuBtn" onclick="showSection('admin')" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 hidden">관리자</button>
+          </nav>
+          <div id="authArea" class="flex items-center gap-2 text-sm">
+            <button onclick="openAuthModal('login')" class="px-3 py-1 border border-blue-500 text-blue-600 rounded hover:bg-blue-50">로그인</button>
+            <button onclick="openAuthModal('register')" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">회원가입</button>
+          </div>
+        </div>
+      
+      <!-- 검색 및 필터 -->
+      <div class="flex flex-wrap gap-3 items-center">
+        <select id="categoryFilter" class="border rounded px-3 py-2">
+          <option value="">전체 카테고리</option>
+          <option value="credit">신용카드</option>
+          <option value="payment">소액결제</option>
+          <option value="scam">사기사이트</option>
+          <option value="other">기타</option>
+        </select>
+        <select id="typeFilter" class="border rounded px-3 py-2">
+          <option value="">전체 분류</option>
+          <option value="safe">정상업체</option>
+          <option value="fraud">사기업체</option>
+          <option value="other">기타</option>
+        </select>
+        <input id="searchInput" type="text" placeholder="업체명 검색..." class="border rounded px-3 py-2 flex-1 min-w-0">
+        <button onclick="searchCompanies()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">검색</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- 업체 목록 섹션 -->
+    <section id="companies-section" class="mb-8">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">업체 정보</h2>
+        <div class="text-sm text-gray-600">
+          🟢 정상업체 | 🔴 사기업체 | ⚪ 기타 | 💳 신용카드 | 📱 소액결제 | ⚠️ 사기사이트 | ❔ 기타 카테고리
+        </div>
+      </div>
+      <div id="companies" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </section>
+
+    <!-- 업체 등록 섹션 -->
+    <section id="add-company-section" class="mb-8 hidden">
+      <h2 class="text-xl font-semibold mb-4">업체 정보 등록</h2>
+      <div class="bg-white rounded-lg p-6 shadow">
+        <form id="companyForm" class="space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="companyName" type="text" placeholder="업체명 *" class="border rounded px-3 py-2" required />
+            <input id="companyWriter" type="text" placeholder="작성자 (선택, 기본: 익명)" class="border rounded px-3 py-2" />
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select id="companyCategory" class="border rounded px-3 py-2" required>
+              <option value="">카테고리 선택 *</option>
+              <option value="credit">신용카드</option>
+              <option value="payment">소액결제</option>
+              <option value="scam">사기사이트</option>
+              <option value="other">기타</option>
+            </select>
+            <select id="companyType" class="border rounded px-3 py-2" required>
+              <option value="">분류 선택 *</option>
+              <option value="safe">정상업체</option>
+              <option value="fraud">사기업체</option>
+              <option value="other">기타</option>
+            </select>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="companyWebsite" type="url" placeholder="웹사이트 주소" class="border rounded px-3 py-2" />
+            <input id="companyPhone" type="tel" placeholder="전화번호" class="border rounded px-3 py-2" />
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input id="companyMessenger" type="text" placeholder="메신저 (카카오톡, 텔레그램 등)" class="border rounded px-3 py-2" />
+            <input id="companyMessengerId" type="text" placeholder="메신저 ID" class="border rounded px-3 py-2" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">평점</label>
+            <select id="companyRating" class="border rounded px-3 py-2">
+              <option value="0">평점 없음</option>
+              <option value="1">⭐ 1점</option>
+              <option value="2">⭐⭐ 2점</option>
+              <option value="3">⭐⭐⭐ 3점</option>
+              <option value="4">⭐⭐⭐⭐ 4점</option>
+              <option value="5">⭐⭐⭐⭐⭐ 5점</option>
+            </select>
+          </div>
+          <textarea id="companyDescription" placeholder="상세 설명 (이용 후기, 주의사항 등)" rows="4" class="w-full border rounded px-3 py-2"></textarea>
+          <div class="flex gap-3">
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">등록</button>
+            <button type="button" onclick="document.getElementById('companyForm').reset()" class="px-6 py-2 bg-gray-200 rounded hover:bg-gray-300">초기화</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- 자유게시판 섹션 -->
+    <section id="posts-section" class="mb-8 hidden">
+      <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">자유게시판</h2>
+        <div class="flex gap-2 items-center">
+          <select id="postCategoryFilter" class="border rounded px-3 py-2 text-sm">
+            <option value="">전체 카테고리</option>
+            <option value="free">자유게시판</option>
+          </select>
+          <button onclick="toggleWrite()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">글쓰기</button>
+        </div>
+      </div>
+  <p class="text-xs text-gray-500 mb-4">* 현재는 기본 카테고리만 제공되며, 추후 여러 카테고리로 확장할 수 있도록 준비되어 있습니다.</p>
+
+      <div id="write-post" class="bg-white rounded-lg p-6 shadow mb-6 hidden">
+        <form id="postForm" class="space-y-4">
+          <input id="postTitle" type="text" placeholder="제목" class="w-full border rounded px-3 py-2" />
+          <div class="flex items-center justify-between text-sm text-gray-600">
+            <span>작성자</span>
+            <span id="postAuthorLabel" class="font-medium text-gray-800">로그인이 필요합니다</span>
+          </div>
+          <select id="postCategory" class="w-full border rounded px-3 py-2">
+            <option value="free">자유게시판</option>
+          </select>
+          <textarea id="postContent" placeholder="내용" rows="6" class="w-full border rounded px-3 py-2"></textarea>
+          <div class="flex gap-3">
+            <button type="submit" class="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">등록</button>
+            <button type="button" onclick="toggleWrite()" class="px-6 py-2 bg-gray-200 rounded hover:bg-gray-300">취소</button>
+          </div>
+        </form>
+      </div>
+      
+      <div id="posts" class="space-y-4"></div>
+    </section>
+
+    <!-- 관리자 섹션 -->
+    <section id="admin-section" class="mb-8 hidden">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">🛡️ 관리자 대시보드</h2>
+        
+        <!-- 탭 -->
+        <div class="flex gap-2 mb-4 border-b">
+          <button onclick="switchAdminTab('posts')" class="admin-tab-btn px-4 py-2 border-b-2 border-red-600 text-red-600 font-semibold" data-tab="posts">게시글 관리</button>
+          <button onclick="switchAdminTab('users')" class="admin-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="users">회원 관리</button>
+        </div>
+
+        <!-- 게시글 관리 탭 -->
+        <div id="admin-posts-tab" class="admin-tab hidden">
+          <div class="bg-white rounded-lg p-6 shadow overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100 border-b">
+                <tr>
+                  <th class="text-left px-4 py-2">ID</th>
+                  <th class="text-left px-4 py-2">제목</th>
+                  <th class="text-left px-4 py-2">작성자</th>
+                  <th class="text-left px-4 py-2">작성일</th>
+                  <th class="text-left px-4 py-2">댓글 수</th>
+                  <th class="text-left px-4 py-2">작업</th>
+                </tr>
+              </thead>
+              <tbody id="admin-posts-list" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 회원 관리 탭 -->
+        <div id="admin-users-tab" class="admin-tab hidden">
+          <div class="bg-white rounded-lg p-6 shadow overflow-x-auto">
+            <table class="w-full text-sm">
+              <thead class="bg-gray-100 border-b">
+                <tr>
+                  <th class="text-left px-4 py-2">ID</th>
+                  <th class="text-left px-4 py-2">아이디</th>
+                  <th class="text-left px-4 py-2">이메일</th>
+                  <th class="text-left px-4 py-2">권한</th>
+                  <th class="text-left px-4 py-2">가입일</th>
+                  <th class="text-left px-4 py-2">작업</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-list" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 게시글 편집 모달 -->
+    <div id="editPostModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeEditPostModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg max-w-2xl w-full shadow-lg" onclick="event.stopPropagation()">
+          <div class="flex items-center justify-between border-b px-6 py-4">
+            <h3 class="text-lg font-semibold">게시글 편집</h3>
+            <button onclick="closeEditPostModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+          </div>
+          <div class="px-6 py-5">
+            <form id="editPostForm" class="space-y-4">
+              <input type="hidden" id="editPostId" />
+              <div>
+                <label class="block text-sm font-medium mb-1">제목</label>
+                <input id="editPostTitle" type="text" class="w-full border rounded px-3 py-2" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1">내용</label>
+                <textarea id="editPostContent" rows="6" class="w-full border rounded px-3 py-2"></textarea>
+              </div>
+              <div class="flex gap-2 justify-end">
+                <button type="button" onclick="closeEditPostModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">취소</button>
+                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 업체 상세 모달 -->
+    <div id="companyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeCompanyModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto" onclick="event.stopPropagation()">
+          <div id="companyDetail" class="p-6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 게시글 상세 모달 -->
+    <div id="postModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closePostModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg max-w-2xl w-full max-h-screen overflow-y-auto" onclick="event.stopPropagation()">
+          <div id="postDetail" class="p-6"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 인증 모달 -->
+    <div id="authModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeAuthModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg w-full max-w-md shadow-lg" onclick="event.stopPropagation()">
+          <div class="flex items-center justify-between border-b px-6 py-4">
+            <h3 id="authModalTitle" class="text-lg font-semibold">로그인</h3>
+            <button onclick="closeAuthModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+          </div>
+          <div class="px-6 py-5">
+            <div id="authError" class="hidden mb-4 text-sm text-red-600"></div>
+            <form id="loginForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-1" for="loginUsername">아이디</label>
+                <input id="loginUsername" type="text" class="w-full border rounded px-3 py-2" autocomplete="username" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1" for="loginPassword">비밀번호</label>
+                <input id="loginPassword" type="password" class="w-full border rounded px-3 py-2" autocomplete="current-password" />
+              </div>
+              <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">로그인</button>
+              <button type="button" onclick="openResetRequestModal()" class="w-full text-sm text-blue-600 hover:underline">비밀번호를 잊으셨나요?</button>
+            </form>
+
+            <form id="registerForm" class="space-y-4 hidden">
+              <div>
+                <label class="block text-sm font-medium mb-1" for="registerUsername">아이디</label>
+                <input id="registerUsername" type="text" class="w-full border rounded px-3 py-2" autocomplete="username" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1" for="registerEmail">이메일</label>
+                <input id="registerEmail" type="email" class="w-full border rounded px-3 py-2" autocomplete="email" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1" for="registerPassword">비밀번호</label>
+                <input id="registerPassword" type="password" class="w-full border rounded px-3 py-2" autocomplete="new-password" />
+                <p class="mt-1 text-xs text-gray-500">비밀번호는 6~64자의 영문/숫자 조합으로 설정해주세요.</p>
+              </div>
+              <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">회원가입</button>
+            </form>
+          </div>
+          <div class="border-t px-6 py-4 text-sm text-gray-600 text-center">
+            <span id="authModalSwitchText">아직 계정이 없으신가요?</span>
+            <button id="authModalSwitchButton" type="button" onclick="switchAuthModal()" class="ml-2 text-blue-600 hover:underline">회원가입</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비밀번호 재설정 요청 모달 -->
+    <div id="resetRequestModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeResetRequestModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg w-full max-w-md shadow-lg" onclick="event.stopPropagation()">
+          <div class="flex items-center justify-between border-b px-6 py-4">
+            <h3 class="text-lg font-semibold">비밀번호 찾기</h3>
+            <button onclick="closeResetRequestModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+          </div>
+          <div class="px-6 py-5 space-y-4">
+            <p class="text-sm text-gray-600">가입 시 사용한 이메일 주소를 입력하면 재설정 링크를 보내드립니다.</p>
+            <div id="resetRequestMessage" class="hidden text-sm"></div>
+            <form id="resetRequestForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-1" for="resetEmail">이메일</label>
+                <input id="resetEmail" type="email" class="w-full border rounded px-3 py-2" autocomplete="email" />
+              </div>
+              <button type="submit" class="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">재설정 링크 보내기</button>
+            </form>
+          </div>
+          <div class="border-t px-6 py-4 text-xs text-gray-500" id="resetDevHint" hidden></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 비밀번호 재설정 완료 모달 -->
+    <div id="resetCompleteModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeResetCompleteModal()">
+      <div class="flex items-center justify-center p-4 min-h-screen">
+        <div class="bg-white rounded-lg w-full max-w-md shadow-lg" onclick="event.stopPropagation()">
+          <div class="flex items-center justify-between border-b px-6 py-4">
+            <h3 class="text-lg font-semibold">새 비밀번호 설정</h3>
+            <button onclick="closeResetCompleteModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+          </div>
+          <div class="px-6 py-5 space-y-4">
+            <p class="text-sm text-gray-600">이메일로 받은 재설정 링크의 토큰을 입력하고 새 비밀번호를 설정하세요.</p>
+            <div id="resetCompleteMessage" class="hidden text-sm"></div>
+            <form id="resetCompleteForm" class="space-y-4">
+              <div>
+                <label class="block text-sm font-medium mb-1" for="resetToken">토큰</label>
+                <input id="resetToken" type="text" class="w-full border rounded px-3 py-2" placeholder="이메일로 전달된 토큰" />
+              </div>
+              <div>
+                <label class="block text-sm font-medium mb-1" for="resetPassword">새 비밀번호</label>
+                <input id="resetPassword" type="password" class="w-full border rounded px-3 py-2" autocomplete="new-password" />
+                <p class="mt-1 text-xs text-gray-500">비밀번호는 6~64자로 입력해주세요.</p>
+              </div>
+              <button type="submit" class="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">비밀번호 변경</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="border-t bg-white mt-12">
+    <div class="max-w-6xl mx-auto px-4 py-8 text-sm text-gray-500 text-center">
+      <p>⚠️ 본 사이트의 정보는 사용자가 제공한 것으로, 정확성을 보장하지 않습니다.</p>
+      <p>거래 전 반드시 직접 확인하시기 바랍니다.</p>
+      <p class="mt-2">© <span id="year"></span> 업체정보 커뮤니티</p>
+    </div>
+  </footer>
+
+  <template id="companyCard">
+    <div class="bg-white border rounded-lg p-4 shadow hover:shadow-md transition-shadow cursor-pointer">
+      <div class="flex justify-between items-start mb-2">
+        <h3 class="font-semibold text-lg" data-role="name"></h3>
+        <span class="text-2xl" data-role="icon"></span>
+      </div>
+      <div class="space-y-1 text-sm text-gray-600 mb-3">
+        <div data-role="category-type"></div>
+        <div data-role="rating"></div>
+        <div data-role="contact"></div>
+      </div>
+      <p class="text-sm text-gray-700 line-clamp-3" data-role="description"></p>
+      <div class="mt-3 text-xs text-gray-500" data-role="meta"></div>
+      <div class="mt-3 flex items-center justify-between">
+        <a data-role="permalink" class="text-sm text-blue-600 hover:underline" href="#" rel="noopener">검색엔진용 상세페이지</a>
+        <button data-role="share" type="button" class="flex items-center gap-1 text-gray-600 hover:text-blue-600 text-sm">
+          <span>🔗</span><span>공유</span>
+        </button>
+      </div>
+    </div>
+  </template>
+
+  <template id="postItem">
+    <article class="bg-white border rounded-lg p-4 shadow">
+      <h3 class="font-semibold"><a data-role="title-link" class="hover:underline" href="#"></a></h3>
+      <p class="text-sm text-gray-500 mt-1" data-role="meta"></p>
+      <p class="mt-2" data-role="content"></p>
+      <div class="mt-3 flex items-center justify-between text-sm">
+        <a data-role="permalink" class="text-blue-600 hover:underline" href="#" rel="noopener">전체 글 보기</a>
+        <button data-role="share" type="button" class="flex items-center gap-1 text-gray-600 hover:text-blue-600">
+          <span>🔗</span><span>공유</span>
+        </button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+
+    // 자유게시판 카테고리 (추후 확장 대비)
+    const POST_CATEGORY_OPTIONS = [
+      { value: 'free', label: '자유게시판' }
+    ];
+
+    let currentSection = 'companies';
+    let currentUser = null;
+    let authModalMode = 'login';
+
+    function updateHeadSeoMeta() {
+      const origin = window.location.origin;
+      const canonicalUrl = `${origin}${window.location.pathname}${window.location.search}`;
+      const homeUrl = `${origin}/`;
+
+      const canonicalLink = $('#canonicalLink');
+      if (canonicalLink) {
+        canonicalLink.setAttribute('href', canonicalUrl);
+      }
+      const altKo = $('#alternateKo');
+      if (altKo) {
+        altKo.setAttribute('href', homeUrl);
+      }
+      const altDefault = $('#alternateDefault');
+      if (altDefault) {
+        altDefault.setAttribute('href', homeUrl);
+      }
+
+      const metaDescription = document.querySelector('meta[name="description"]')?.getAttribute('content') || '정상 업체와 사기업체 정보를 실시간으로 공유하고 검증하는 커뮤니티';
+      const titleText = document.title || '소액결제 · 신용카드 업체 정보 커뮤니티';
+
+      const setMeta = (selector, value) => {
+        const element = document.querySelector(selector);
+        if (element && value) {
+          element.setAttribute('content', value);
+        }
+      };
+
+      setMeta('meta[property="og:title"]', titleText);
+      setMeta('meta[property="og:description"]', metaDescription);
+      setMeta('meta[property="og:url"]', canonicalUrl);
+      setMeta('meta[name="twitter:title"]', titleText);
+      setMeta('meta[name="twitter:description"]', metaDescription);
+      setMeta('meta[name="twitter:url"]', canonicalUrl);
+
+      const existingLd = document.querySelector('script[data-dynamic-ld="website"]');
+      if (existingLd && existingLd.parentNode) {
+        existingLd.parentNode.removeChild(existingLd);
+      }
+      const ldData = {
+        '@context': 'https://schema.org',
+        '@type': 'WebSite',
+        name: '업체정보 커뮤니티',
+        url: homeUrl,
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${origin}/?search={search_term_string}`,
+          'query-input': 'required name=search_term_string'
+        }
+      };
+      const ldScript = document.createElement('script');
+      ldScript.type = 'application/ld+json';
+      ldScript.dataset.dynamicLd = 'website';
+      ldScript.text = JSON.stringify(ldData);
+      document.head.appendChild(ldScript);
+    }
+
+    function setAuthState(user) {
+      currentUser = user;
+      updateAuthArea();
+      updatePostAuthorLabel();
+      const writeBox = $('#write-post');
+      if (!user && writeBox && !writeBox.classList.contains('hidden')) {
+        writeBox.classList.add('hidden');
+      }
+    }
+
+    function updateAuthArea() {
+      const area = $('#authArea');
+      const adminBtn = $('#adminMenuBtn');
+      if (!area) return;
+      
+      // 관리자 메뉴 표시 여부 업데이트
+      if (adminBtn) {
+        if (currentUser && currentUser.is_admin) {
+          adminBtn.classList.remove('hidden');
+        } else {
+          adminBtn.classList.add('hidden');
+        }
+      }
+      
+      if (currentUser) {
+        area.innerHTML = `
+          <span class="text-gray-700">👋 ${currentUser.username}${currentUser.is_admin ? ' (관리자)' : ''}</span>
+          <button onclick="logoutUser()" class="px-3 py-1 border border-gray-300 text-gray-700 rounded hover:bg-gray-100">로그아웃</button>
+        `;
+      } else {
+        area.innerHTML = `
+          <button onclick="openAuthModal('login')" class="px-3 py-1 border border-blue-500 text-blue-600 rounded hover:bg-blue-50">로그인</button>
+          <button onclick="openAuthModal('register')" class="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">회원가입</button>
+        `;
+      }
+    }
+
+    function updatePostAuthorLabel() {
+      const label = $('#postAuthorLabel');
+      if (!label) return;
+      label.textContent = currentUser ? currentUser.username : '로그인이 필요합니다';
+    }
+
+    function setAuthError(message) {
+      const box = $('#authError');
+      if (!box) return;
+      if (message) {
+        box.textContent = message;
+        box.classList.remove('hidden');
+      } else {
+        box.textContent = '';
+        box.classList.add('hidden');
+      }
+    }
+
+    function clearAuthForms() {
+      $('#loginForm')?.reset();
+      $('#registerForm')?.reset();
+    }
+
+    function toggleAuthForms() {
+      const loginForm = $('#loginForm');
+      const registerForm = $('#registerForm');
+      const title = $('#authModalTitle');
+      const switchText = $('#authModalSwitchText');
+      const switchButton = $('#authModalSwitchButton');
+
+      if (!loginForm || !registerForm || !title || !switchText || !switchButton) return;
+
+      if (authModalMode === 'login') {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        title.textContent = '로그인';
+        switchText.textContent = '아직 계정이 없으신가요?';
+        switchButton.textContent = '회원가입';
+        setTimeout(() => { $('#loginUsername')?.focus(); }, 50);
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        title.textContent = '회원가입';
+        switchText.textContent = '이미 계정이 있으신가요?';
+        switchButton.textContent = '로그인';
+        setTimeout(() => { $('#registerUsername')?.focus(); }, 50);
+      }
+    }
+
+    function openAuthModal(mode = 'login') {
+      authModalMode = mode;
+      clearAuthForms();
+      setAuthError('');
+      toggleAuthForms();
+      const modal = $('#authModal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function switchAuthModal(mode) {
+      authModalMode = mode || (authModalMode === 'login' ? 'register' : 'login');
+      clearAuthForms();
+      setAuthError('');
+      toggleAuthForms();
+    }
+
+    function closeAuthModal() {
+      const modal = $('#authModal');
+      if (modal) modal.classList.add('hidden');
+      setAuthError('');
+      clearAuthForms();
+    }
+
+    function setResetRequestMessage(message, type = 'info') {
+      const box = $('#resetRequestMessage');
+      if (!box) return;
+      box.textContent = message || '';
+      box.classList.remove('text-red-600', 'text-green-600', 'text-blue-600');
+      if (!message) {
+        box.classList.add('hidden');
+        return;
+      }
+      box.classList.remove('hidden');
+      const colorClass = type === 'success' ? 'text-green-600' : (type === 'info' ? 'text-blue-600' : 'text-red-600');
+      box.classList.add(colorClass);
+    }
+
+    function setResetCompleteMessage(message, type = 'info') {
+      const box = $('#resetCompleteMessage');
+      if (!box) return;
+      box.textContent = message || '';
+      box.classList.remove('text-red-600', 'text-green-600', 'text-blue-600');
+      if (!message) {
+        box.classList.add('hidden');
+        return;
+      }
+      box.classList.remove('hidden');
+      const colorClass = type === 'success' ? 'text-green-600' : (type === 'info' ? 'text-blue-600' : 'text-red-600');
+      box.classList.add(colorClass);
+    }
+
+    function openResetRequestModal() {
+      closeAuthModal();
+      const form = $('#resetRequestForm');
+      if (form) form.reset();
+      setResetRequestMessage('');
+      const hint = $('#resetDevHint');
+      if (hint) {
+        hint.textContent = '';
+        hint.hidden = true;
+      }
+      const modal = $('#resetRequestModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        setTimeout(() => { $('#resetEmail')?.focus(); }, 50);
+      }
+    }
+
+    function closeResetRequestModal() {
+      const modal = $('#resetRequestModal');
+      if (modal) modal.classList.add('hidden');
+      setResetRequestMessage('');
+      const form = $('#resetRequestForm');
+      if (form) form.reset();
+      const hint = $('#resetDevHint');
+      if (hint) {
+        hint.textContent = '';
+        hint.hidden = true;
+      }
+    }
+
+    function openResetCompleteModal(token = '') {
+      closeResetRequestModal();
+      closeAuthModal();
+      const form = $('#resetCompleteForm');
+      if (form) form.reset();
+      setResetCompleteMessage('');
+      const modal = $('#resetCompleteModal');
+      if (modal) {
+        modal.classList.remove('hidden');
+        const tokenField = $('#resetToken');
+        if (tokenField && token) {
+          tokenField.value = token;
+        }
+        setTimeout(() => {
+          const tokenField = $('#resetToken');
+          const passwordField = $('#resetPassword');
+          if (tokenField && tokenField.value && passwordField) {
+            passwordField.focus();
+          } else if (tokenField) {
+            tokenField.focus();
+          }
+        }, 50);
+      }
+    }
+
+    function closeResetCompleteModal() {
+      const modal = $('#resetCompleteModal');
+      if (modal) modal.classList.add('hidden');
+      setResetCompleteMessage('');
+      const form = $('#resetCompleteForm');
+      if (form) form.reset();
+    }
+
+    async function fetchCurrentUser() {
+      try {
+        const res = await fetch('/api/auth/me', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (json.success) {
+          setAuthState(json.user);
+        } else {
+          setAuthState(null);
+        }
+      } catch (e) {
+        console.error(e);
+        setAuthState(null);
+      }
+    }
+
+    async function logoutUser() {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      } catch (e) {
+        console.error(e);
+      } finally {
+        setAuthState(null);
+        if (currentSection === 'posts') {
+          loadPosts();
+        }
+      }
+    }
+
+    // 섹션 전환
+    function showSection(section) {
+      // 관리자 권한 확인
+      if (section === 'admin' && (!currentUser || !currentUser.is_admin)) {
+        alert('관리자만 접근할 수 있습니다.');
+        return;
+      }
+      
+      ['companies', 'add-company', 'posts', 'admin'].forEach(s => {
+        $(`#${s}-section`).classList.add('hidden');
+      });
+      $(`#${section}-section`).classList.remove('hidden');
+      currentSection = section;
+
+      if (section === 'companies') {
+        loadCompanies();
+      } else if (section === 'posts') {
+        loadPosts();
+      } else if (section === 'admin') {
+        loadAdminDashboard();
+      }
+    }
+
+    // 업체 카드 아이콘 및 색상
+    function getCompanyIcon(category, type) {
+      const icons = {
+        'payment-safe': '📱🟢',
+        'payment-fraud': '📱🔴',
+        'payment-other': '📱⚪',
+        'credit-safe': '💳🟢',
+        'credit-fraud': '💳🔴',
+        'credit-other': '💳⚪',
+        'scam-safe': '⚠️🟢',
+        'scam-fraud': '⚠️🔴',
+        'scam-other': '⚠️⚪',
+        'other-safe': '❔�',
+        'other-fraud': '❔�🔴',
+        'other-other': '❔⚪'
+      };
+      return icons[`${category}-${type}`] || '❓';
+    }
+
+    function getCategoryText(category) {
+      switch (category) {
+        case 'payment':
+          return '소액결제';
+        case 'credit':
+          return '신용카드';
+        case 'scam':
+          return '사기사이트';
+        case 'other':
+          return '기타';
+        default:
+          return '기타';
+      }
+    }
+
+    function getTypeText(type) {
+      switch (type) {
+        case 'safe':
+          return '정상업체';
+        case 'fraud':
+          return '사기업체';
+        case 'other':
+          return '기타';
+        default:
+          return '기타';
+      }
+    }
+
+    function getRatingText(rating) {
+      if (!rating || rating === 0) return '평점 없음';
+      return '⭐'.repeat(rating) + ` ${rating}점`;
+    }
+
+    function getPostCategoryLabel(value) {
+      const found = POST_CATEGORY_OPTIONS.find(o => o.value === value);
+      return found ? found.label : '자유게시판';
+    }
+
+    function populatePostCategorySelectors() {
+      const filter = $('#postCategoryFilter');
+      if (filter) {
+        filter.innerHTML = '<option value="">전체 카테고리</option>' + POST_CATEGORY_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+      }
+
+      const writeSelect = $('#postCategory');
+      if (writeSelect) {
+        writeSelect.innerHTML = POST_CATEGORY_OPTIONS.map(o => `<option value="${o.value}">${o.label}</option>`).join('');
+      }
+    }
+
+    // 업체 목록 로드
+    async function loadCompanies() {
+      const box = $('#companies');
+      box.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">로딩중...</div>';
+      
+      try {
+        const category = $('#categoryFilter').value;
+        const type = $('#typeFilter').value;
+        const search = $('#searchInput').value;
+        
+        const params = new URLSearchParams();
+        if (category) params.append('category', category);
+        if (type) params.append('type', type);
+        if (search) params.append('search', search);
+        
+        const res = await fetch(`/api/companies?${params}`);
+        const json = await res.json();
+        
+        if (!json.success) throw new Error(json.error || 'load error');
+        
+        box.innerHTML = '';
+        
+        if (json.companies.length === 0) {
+          box.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">등록된 업체가 없습니다.</div>';
+          return;
+        }
+        
+        json.companies.forEach(company => {
+          const node = $('#companyCard').content.cloneNode(true);
+          const card = node.querySelector('div');
+          
+          card.onclick = () => showCompanyDetail(company.id);
+          
+          node.querySelector('[data-role="name"]').textContent = company.name;
+          node.querySelector('[data-role="icon"]').textContent = getCompanyIcon(company.category, company.type);
+          node.querySelector('[data-role="category-type"]').textContent = `${getCategoryText(company.category)} · ${getTypeText(company.type)}`;
+          node.querySelector('[data-role="rating"]').textContent = getRatingText(company.rating);
+          
+          let contact = '';
+          if (company.website) contact += `🌐 ${company.website}`;
+          if (company.phone) contact += (contact ? ' · ' : '') + `📞 ${company.phone}`;
+          if (company.messenger && company.messenger_id) contact += (contact ? ' · ' : '') + `💬 ${company.messenger}: ${company.messenger_id}`;
+          node.querySelector('[data-role="contact"]').textContent = contact || '연락처 정보 없음';
+          
+          const desc = company.description || '상세 설명이 없습니다.';
+          node.querySelector('[data-role="description"]').textContent = desc.length > 100 ? desc.slice(0, 100) + '...' : desc;
+          
+          let metaText = `${company.writer || '익명'} · ${new Date(company.created).toLocaleDateString()}`;
+          if (company.report_count > 0) {
+            metaText += ` · 🚨 신고 ${company.report_count}건`;
+          }
+          node.querySelector('[data-role="meta"]').textContent = metaText;
+
+          const permalink = node.querySelector('[data-role="permalink"]');
+          if (permalink) {
+            permalink.setAttribute('href', `/companies/${company.id}`);
+            permalink.addEventListener('click', (event) => event.stopPropagation());
+          }
+
+          const shareButton = node.querySelector('[data-role="share"]');
+          if (shareButton) {
+            shareButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const shareText = `${company.name} - ${getCategoryText(company.category)} · ${getTypeText(company.type)}`;
+              shareLink(`/companies/${company.id}`, shareText, `${company.description || ''}`.substring(0, 100));
+            });
+          }
+          
+          // 사기업체는 빨간 테두리
+          if (company.type === 'fraud') {
+            card.classList.add('border-red-300');
+          }
+          
+          box.appendChild(node);
+        });
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = '<div class="col-span-full text-center py-8 text-red-600">목록을 불러오지 못했습니다.</div>';
+      }
+    }
+
+    // 업체 검색
+    function searchCompanies() {
+      if (currentSection === 'companies') {
+        loadCompanies();
+      }
+    }
+
+    // 업체 상세 정보 표시
+    async function showCompanyDetail(companyId) {
+      const modal = $('#companyModal');
+      const detail = $('#companyDetail');
+
+      currentSection = 'companies';
+      
+      detail.innerHTML = '<div class="text-center py-8">로딩중...</div>';
+      modal.classList.remove('hidden');
+      
+      try {
+        const res = await fetch(`/api/companies/${companyId}`);
+        const json = await res.json();
+        
+        if (!json.success) throw new Error(json.error);
+        
+        const { company, reviews } = json;
+        
+        detail.innerHTML = `
+          <div class="border-b pb-4 mb-4">
+            <div class="flex justify-between items-start">
+              <div>
+                <h2 class="text-2xl font-bold">${company.name}</h2>
+                <div class="text-lg mt-1">
+                  ${getCompanyIcon(company.category, company.type)} ${getCategoryText(company.category)} · ${getTypeText(company.type)}
+                </div>
+              </div>
+              <button onclick="closeCompanyModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            <div class="mt-3 space-y-2 text-sm text-gray-600">
+              ${company.website ? `<div>🌐 <a href="${company.website}" target="_blank" class="text-blue-600 hover:underline">${company.website}</a></div>` : ''}
+              ${company.phone ? `<div>📞 ${company.phone}</div>` : ''}
+              ${company.messenger && company.messenger_id ? `<div>💬 ${company.messenger}: ${company.messenger_id}</div>` : ''}
+              <div>⭐ ${getRatingText(company.rating)}</div>
+              ${company.report_count > 0 ? `<div class="text-red-600">🚨 신고 ${company.report_count}건</div>` : ''}
+              <div class="text-xs text-gray-500">등록: ${company.writer || '익명'} · ${new Date(company.created).toLocaleString()}</div>
+              <div><a href="/companies/${company.id}" class="text-blue-600 hover:underline">검색엔진용 상세페이지 열기</a></div>
+            </div>
+          </div>
+          
+          <div class="mb-6">
+            <h3 class="font-semibold mb-2">상세 설명</h3>
+            <p class="text-gray-700 whitespace-pre-wrap">${company.description || '상세 설명이 없습니다.'}</p>
+          </div>
+          
+          <div class="mb-6">
+            <h3 class="font-semibold mb-3">리뷰 및 신고 (${reviews.length}개)</h3>
+            <div class="space-y-3 max-h-64 overflow-y-auto">
+              ${reviews.length > 0 ? reviews.map(review => `
+                <div class="border rounded p-3 ${review.review_type === 'report' ? 'bg-red-50 border-red-200' : 'bg-gray-50'}">
+                  <div class="flex justify-between items-start mb-2">
+                    <span class="text-sm font-medium ${review.review_type === 'report' ? 'text-red-600' : 'text-blue-600'}">
+                      ${review.review_type === 'report' ? '🚨 신고' : '💬 리뷰'}
+                      ${review.rating ? ` · ${getRatingText(review.rating)}` : ''}
+                    </span>
+                    <span class="text-xs text-gray-500">${new Date(review.created).toLocaleDateString()}</span>
+                  </div>
+                  <p class="text-sm text-gray-700 whitespace-pre-wrap">${review.content}</p>
+                  <div class="text-xs text-gray-500 mt-1">작성자: ${review.writer || '익명'}</div>
+                </div>
+              `).join('') : '<div class="text-gray-500 text-center py-4">아직 리뷰가 없습니다.</div>'}
+            </div>
+          </div>
+          
+          <div class="border-t pt-4">
+            <h3 class="font-semibold mb-3">리뷰/신고 작성</h3>
+            <form id="reviewForm" class="space-y-3">
+              <input type="hidden" id="reviewCompanyId" value="${company.id}">
+              <div class="flex gap-3">
+                <select id="reviewType" class="border rounded px-3 py-2">
+                  <option value="review">💬 리뷰 작성</option>
+                  <option value="report">🚨 신고하기</option>
+                </select>
+                <select id="reviewRating" class="border rounded px-3 py-2">
+                  <option value="">평점 선택</option>
+                  <option value="1">⭐ 1점</option>
+                  <option value="2">⭐⭐ 2점</option>
+                  <option value="3">⭐⭐⭐ 3점</option>
+                  <option value="4">⭐⭐⭐⭐ 4점</option>
+                  <option value="5">⭐⭐⭐⭐⭐ 5점</option>
+                </select>
+                <input id="reviewWriter" type="text" placeholder="작성자(선택)" class="border rounded px-3 py-2">
+              </div>
+              <textarea id="reviewContent" placeholder="리뷰 또는 신고 내용을 작성해주세요..." rows="3" class="w-full border rounded px-3 py-2"></textarea>
+              <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">등록</button>
+            </form>
+          </div>
+        `;
+        
+        // 리뷰 폼 이벤트 추가
+        $('#reviewForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          await submitReview();
+        });
+        
+      } catch (e) {
+        console.error(e);
+        detail.innerHTML = '<div class="text-center py-8 text-red-600">상세 정보를 불러오지 못했습니다.</div>';
+      }
+    }
+
+    function closeCompanyModal() {
+      $('#companyModal').classList.add('hidden');
+    }
+
+    function renderPostComments(section, comments) {
+      if (!section) return;
+      const list = section.querySelector('[data-role="comments-list"]');
+      const count = section.querySelector('[data-role="comments-count"]');
+      if (count) {
+        count.textContent = Array.isArray(comments) ? comments.length : 0;
+      }
+      if (!list) return;
+      list.innerHTML = '';
+
+      if (!comments || comments.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'text-sm text-gray-500 border border-dashed border-gray-300 rounded-lg px-4 py-6 text-center bg-gray-50';
+        empty.textContent = '아직 댓글이 없습니다. 첫 댓글을 남겨주세요.';
+        list.appendChild(empty);
+        return;
+      }
+
+      comments.forEach((comment) => {
+        const item = document.createElement('div');
+        item.className = 'border rounded-lg bg-white p-3 shadow-sm';
+
+        const header = document.createElement('div');
+        header.className = 'flex justify-between items-start mb-2';
+
+        const writerEl = document.createElement('span');
+        writerEl.className = 'text-sm font-medium text-gray-700';
+        writerEl.textContent = comment.writer || '익명';
+
+        const dateEl = document.createElement('span');
+        dateEl.className = 'text-xs text-gray-500';
+        try {
+          dateEl.textContent = new Date(comment.created || Date.now()).toLocaleString('ko-KR');
+        } catch (e) {
+          dateEl.textContent = comment.created || '';
+        }
+
+        header.appendChild(writerEl);
+        header.appendChild(dateEl);
+
+        const body = document.createElement('p');
+        body.className = 'text-sm text-gray-800 whitespace-pre-wrap';
+        body.textContent = comment.content || '';
+
+        item.appendChild(header);
+        item.appendChild(body);
+        list.appendChild(item);
+      });
+    }
+
+    function setupCommentForm(section, postId) {
+      if (!section) return;
+      const container = section.querySelector('[data-role="comment-form"]');
+      if (!container) return;
+
+      if (!currentUser) {
+        container.innerHTML = `
+          <div class="border border-dashed border-gray-300 rounded-lg px-4 py-3 bg-gray-50 text-sm text-gray-600">
+            댓글을 남기려면 <button type="button" class="text-blue-600 hover:underline" data-action="open-login">로그인</button>해주세요.
+          </div>
+        `;
+        const loginBtn = container.querySelector('[data-action="open-login"]');
+        if (loginBtn) {
+          loginBtn.addEventListener('click', () => openAuthModal('login'));
+        }
+        return;
+      }
+
+      const textareaId = `commentContent-${postId}`;
+      const formId = `commentForm-${postId}`;
+      container.innerHTML = `
+        <form class="space-y-3" id="${formId}">
+          <textarea id="${textareaId}" rows="3" class="w-full border rounded px-3 py-2" placeholder="댓글을 입력해주세요."></textarea>
+          <div class="flex items-center justify-between">
+            <span class="text-sm text-gray-500">작성자: ${currentUser.username}</span>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">등록</button>
+          </div>
+        </form>
+      `;
+
+      const form = container.querySelector(`#${formId}`);
+      if (!form) return;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const textarea = form.querySelector(`#${textareaId}`);
+        if (!textarea) return;
+        const content = textarea.value.trim();
+        if (!content) {
+          alert('댓글 내용을 입력해주세요.');
+          return;
+        }
+        try {
+          const res = await fetch(`/api/posts/${postId}/comments`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+          });
+          const json = await res.json();
+          if (!res.ok || !json.success) {
+            throw new Error(json.error || '댓글 등록에 실패했습니다.');
+          }
+          textarea.value = '';
+          renderPostComments(section, json.comments || []);
+          if (currentSection === 'posts') {
+            loadPosts();
+          }
+        } catch (err) {
+          console.error(err);
+          alert(err.message || '댓글 등록에 실패했습니다.');
+        }
+      });
+    }
+
+    async function showPostDetail(postId) {
+      const id = parseInt(postId, 10);
+      const modal = $('#postModal');
+      const detail = $('#postDetail');
+      if (!modal || !detail || Number.isNaN(id)) return;
+
+      currentSection = 'posts';
+      detail.innerHTML = '<div class="text-center py-8 text-gray-500">로딩중...</div>';
+      modal.classList.remove('hidden');
+
+      try {
+        const res = await fetch(`/api/posts/${id}`);
+        const json = await res.json();
+        if (!res.ok || !json.success) {
+          throw new Error(json.error || '게시글을 불러오지 못했습니다.');
+        }
+
+        const post = json.post;
+        const comments = json.comments || [];
+        const title = post.title || '(제목 없음)';
+        const meta = `${getPostCategoryLabel(post.category)} · ${post.writer || '익명'} · ${new Date(post.created).toLocaleString()}`;
+        detail.innerHTML = `
+          <div class="flex justify-between items-start mb-4">
+            <div>
+              <h2 class="text-xl font-semibold text-gray-800">${title}</h2>
+              <p class="text-sm text-gray-500 mt-1">${meta}</p>
+            </div>
+            <button onclick="closePostModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
+          </div>
+          <div class="whitespace-pre-wrap leading-relaxed text-gray-800" data-role="post-body"></div>
+          <div class="mt-6 flex items-center justify-between text-sm">
+            <a href="/posts/${post.id}" class="text-blue-600 hover:underline">검색엔진용 고정 주소 열기</a>
+            <button type="button" class="flex items-center gap-1 text-gray-600 hover:text-blue-600" data-role="share-post">
+              <span>🔗</span><span>공유</span>
+            </button>
+          </div>
+          <div class="mt-8 border-t pt-5" data-role="comments-section">
+            <div class="flex items-center justify-between">
+              <h3 class="text-lg font-semibold text-gray-800">댓글</h3>
+              <span class="text-sm text-gray-500">총 <span data-role="comments-count">${comments.length}</span>개</span>
+            </div>
+            <div class="mt-3 space-y-3" data-role="comments-list"></div>
+            <div class="mt-4" data-role="comment-form"></div>
+          </div>
+        `;
+        const body = detail.querySelector('[data-role="post-body"]');
+        if (body) {
+          body.textContent = post.content || '';
+        }
+
+        const shareBtn = detail.querySelector('[data-role="share-post"]');
+        if (shareBtn) {
+          shareBtn.addEventListener('click', () => {
+            const shareText = textOnly(post.content).slice(0, 120);
+            shareLink(`/posts/${post.id}`, post.title || '커뮤니티 게시글', shareText);
+          });
+        }
+
+        const commentsSection = detail.querySelector('[data-role="comments-section"]');
+        if (commentsSection) {
+          renderPostComments(commentsSection, comments);
+          setupCommentForm(commentsSection, post.id);
+        }
+      } catch (err) {
+        console.error(err);
+        detail.innerHTML = `
+          <div class="text-center py-10">
+            <p class="text-red-600 mb-3">게시글을 불러오지 못했습니다.</p>
+            <p class="text-sm text-gray-500">잠시 후 다시 시도해주세요.</p>
+            <button onclick="closePostModal()" class="mt-4 px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">닫기</button>
+          </div>
+        `;
+      }
+    }
+
+    function closePostModal() {
+      const modal = $('#postModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // 리뷰 제출
+    async function submitReview() {
+      const companyId = $('#reviewCompanyId').value;
+      const reviewType = $('#reviewType').value;
+      const rating = $('#reviewRating').value;
+      const content = $('#reviewContent').value.trim();
+      const writer = $('#reviewWriter').value.trim();
+      
+      if (!content) {
+        alert('리뷰 내용을 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const res = await fetch(`/api/companies/${companyId}/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            review_type: reviewType,
+            rating: rating ? parseInt(rating) : null,
+            content,
+            writer
+          })
+        });
+        
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        
+        alert('등록되었습니다.');
+        showCompanyDetail(companyId); // 새로고침
+      } catch (e) {
+        console.error(e);
+        alert('등록 실패: ' + e.message);
+      }
+    }
+
+    // 업체 등록
+    $('#companyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const name = $('#companyName').value.trim();
+      const category = $('#companyCategory').value;
+      const type = $('#companyType').value;
+      const website = $('#companyWebsite').value.trim();
+      const phone = $('#companyPhone').value.trim();
+      const messenger = $('#companyMessenger').value.trim();
+      const messenger_id = $('#companyMessengerId').value.trim();
+      const description = $('#companyDescription').value.trim();
+      const rating = $('#companyRating').value;
+      const writer = $('#companyWriter').value.trim();
+      
+      if (!name || !category || !type) {
+        alert('필수 정보를 모두 입력해주세요.');
+        return;
+      }
+      
+      try {
+        const res = await fetch('/api/companies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name, category, type, website, phone, messenger, messenger_id, description, rating: parseInt(rating), writer
+          })
+        });
+        
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+        
+        alert('업체가 등록되었습니다.');
+        $('#companyForm').reset();
+        showSection('companies');
+      } catch (e) {
+        console.error(e);
+        alert('등록 실패: ' + e.message);
+      }
+    });
+
+    function textOnly(html) {
+      const d = document.createElement('div');
+      d.innerHTML = String(html || '');
+      return (d.textContent || d.innerText || '').replace(/\s+/g,' ').trim();
+    }
+
+    // 게시글 관련 함수들
+    function toggleWrite() {
+      if (!currentUser) {
+        alert('게시글 작성은 로그인 후 이용 가능합니다.');
+        openAuthModal('login');
+        return;
+      }
+
+      const box = $('#write-post');
+      box.classList.toggle('hidden');
+      if (!box.classList.contains('hidden')) {
+        const filterValue = ($('#postCategoryFilter') && $('#postCategoryFilter').value) || 'free';
+        if ($('#postCategory')) {
+          $('#postCategory').value = filterValue || 'free';
+        }
+      }
+    }
+
+    async function loadPosts() {
+      const box = $('#posts');
+      box.innerHTML = '<div class="text-center py-8 text-gray-500">로딩중...</div>';
+      try {
+        const category = $('#postCategoryFilter') ? $('#postCategoryFilter').value : '';
+        const params = new URLSearchParams();
+        if (category) params.append('category', category);
+        const query = params.toString();
+        const res = await fetch(`/api/posts${query ? `?${query}` : ''}`);
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'load error');
+        
+        box.innerHTML = '';
+        json.posts.forEach(p => {
+          const node = $('#postItem').content.cloneNode(true);
+          const article = node.querySelector('article');
+          if (article) {
+            article.classList.add('cursor-pointer', 'transition-shadow', 'hover:shadow-md');
+            article.addEventListener('click', (event) => {
+              if (event.target.closest('a')) return;
+              showPostDetail(p.id);
+            });
+          }
+          const titleLink = node.querySelector('[data-role="title-link"]');
+          if (titleLink) {
+            titleLink.textContent = p.title || '(제목 없음)';
+            titleLink.setAttribute('href', `/posts/${p.id}`);
+            titleLink.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              showPostDetail(p.id);
+            });
+          }
+          const categoryLabel = getPostCategoryLabel(p.category);
+          const commentCount = typeof p.comment_count === 'number' ? p.comment_count : 0;
+          node.querySelector('[data-role="meta"]').textContent = `${categoryLabel} · ${p.writer || '익명'} · ${new Date(p.created).toLocaleString()} · 💬 ${commentCount}댓글`;
+          node.querySelector('[data-role="content"]').textContent = textOnly(p.content).slice(0, 300);
+          const permalink = node.querySelector('[data-role="permalink"]');
+          if (permalink) {
+            permalink.setAttribute('href', `/posts/${p.id}`);
+            permalink.addEventListener('click', (event) => event.stopPropagation());
+          }
+          const shareButton = node.querySelector('[data-role="share"]');
+          if (shareButton) {
+            shareButton.addEventListener('click', (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              const shareText = textOnly(p.content).slice(0, 100);
+              shareLink(`/posts/${p.id}`, p.title || '커뮤니티 게시글', shareText);
+            });
+          }
+          box.appendChild(node);
+        });
+        if (!box.children.length) box.innerHTML = '<div class="text-center py-8 text-gray-500">아직 글이 없습니다.</div>';
+      } catch (e) {
+        console.error(e);
+        box.innerHTML = '<div class="text-center py-8 text-red-600">목록을 불러오지 못했습니다.</div>';
+      }
+    }
+
+    $('#postForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentUser) {
+        alert('로그인 후 이용 가능합니다.');
+        openAuthModal('login');
+        return;
+      }
+      const title = $('#postTitle').value.trim();
+      const content = $('#postContent').value.trim();
+      const category = $('#postCategory') ? $('#postCategory').value : 'free';
+      if (!content) { alert('내용을 입력하세요'); return; }
+      try {
+        const res = await fetch('/api/posts', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content, category })
+        });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || 'create error');
+        $('#postForm').reset();
+        toggleWrite();
+        await loadPosts();
+      } catch (e) {
+        console.error(e);
+        alert('등록 실패: ' + e.message);
+      }
+    });
+
+    // 공유 기능
+    function shareLink(path, title = '커뮤니티', text = '') {
+      const url = `${window.location.origin}${path}`;
+      const shareData = {
+        title: title,
+        text: text ? `${text}\n` : '',
+        url: url
+      };
+
+      // Web Share API 지원 여부 확인
+      if (navigator.share) {
+        navigator.share(shareData).catch(err => {
+          console.warn('Share failed:', err);
+          fallbackCopyToClipboard(url);
+        });
+      } else {
+        // Web Share API 미지원 시 클립보드 복사
+        fallbackCopyToClipboard(url);
+      }
+    }
+
+    function fallbackCopyToClipboard(url) {
+      const textarea = document.createElement('textarea');
+      textarea.value = url;
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      try {
+        document.execCommand('copy');
+        alert('링크가 복사되었습니다:\n' + url);
+      } catch (e) {
+        alert('링크: ' + url);
+      }
+      document.body.removeChild(textarea);
+    }
+
+    // 댓글 렌더링
+    function renderPostComments(section, comments) {
+      const list = section.querySelector('[data-role="comments-list"]');
+      if (!list) return;
+      
+      list.innerHTML = '';
+      comments.forEach(c => {
+        const div = document.createElement('div');
+        div.className = 'bg-gray-50 p-3 rounded text-sm';
+        div.innerHTML = `
+          <div class="flex justify-between items-start">
+            <div class="font-medium text-gray-700">${c.writer || '익명'}</div>
+            <div class="text-xs text-gray-500">${new Date(c.created).toLocaleString()}</div>
+          </div>
+          <p class="mt-1 text-gray-700">${c.content}</p>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    // 댓글 폼 설정
+    function setupCommentForm(section, postId) {
+      const form = section.querySelector('[data-role="comment-form"]');
+      if (!form) return;
+      
+      form.innerHTML = `
+        <form data-post-id="${postId}" class="space-y-2">
+          <textarea placeholder="댓글을 입력하세요..." class="w-full border rounded px-3 py-2 text-sm" rows="2" required></textarea>
+          <div class="flex gap-2 justify-end">
+            <button type="submit" class="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700">등록</button>
+          </div>
+        </form>
+      `;
+      
+      const formEl = form.querySelector('form');
+      if (formEl) {
+        formEl.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          if (!currentUser) {
+            alert('댓글 작성은 로그인 후 이용 가능합니다.');
+            openAuthModal('login');
+            return;
+          }
+          
+          const textarea = formEl.querySelector('textarea');
+          const content = textarea.value.trim();
+          if (!content) {
+            alert('댓글 내용을 입력하세요.');
+            return;
+          }
+          
+          try {
+            const res = await fetch(`/api/posts/${postId}/comments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ content }),
+              credentials: 'same-origin'
+            });
+            
+            const json = await res.json();
+            if (!json.success) throw new Error(json.error);
+            
+            textarea.value = '';
+            await showPostDetail(postId); // 댓글 추가 후 새로고침
+          } catch (e) {
+            console.error(e);
+            alert('댓글 등록 실패: ' + e.message);
+          }
+        });
+      }
+    }
+
+    // ========== 관리자 함수 ==========
+
+    // 관리자 탭 전환
+    function switchAdminTab(tab) {
+      $$('.admin-tab-btn').forEach(btn => {
+        btn.classList.remove('border-red-600', 'text-red-600', 'font-semibold');
+        btn.classList.add('border-transparent', 'text-gray-600', 'hover:text-gray-800');
+      });
+      $$(`[data-tab="${tab}"]`).forEach(btn => {
+        btn.classList.add('border-red-600', 'text-red-600', 'font-semibold');
+        btn.classList.remove('border-transparent', 'text-gray-600', 'hover:text-gray-800');
+      });
+
+      $$('.admin-tab').forEach(t => t.classList.add('hidden'));
+      $(`#admin-${tab}-tab`).classList.remove('hidden');
+
+      if (tab === 'posts') {
+        loadAdminPosts();
+      } else if (tab === 'users') {
+        loadAdminUsers();
+      }
+    }
+
+    // 관리자 대시보드 로드
+    async function loadAdminDashboard() {
+      switchAdminTab('posts');
+    }
+
+    // 관리자: 게시글 목록 로드
+    async function loadAdminPosts() {
+      try {
+        const res = await fetch('/api/admin/posts', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const tbody = $('#admin-posts-list');
+        tbody.innerHTML = '';
+        json.posts.forEach(p => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-gray-50';
+          row.innerHTML = `
+            <td class="px-4 py-2">${p.id}</td>
+            <td class="px-4 py-2 max-w-xs truncate">${p.title || '(제목 없음)'}</td>
+            <td class="px-4 py-2">${p.writer || '익명'}</td>
+            <td class="px-4 py-2 text-xs text-gray-500">${new Date(p.created).toLocaleString()}</td>
+            <td class="px-4 py-2 text-center">${p.comment_count || 0}</td>
+            <td class="px-4 py-2 flex gap-2">
+              <button onclick="openEditPostModal(${p.id}, '${p.title ? p.title.replace(/'/g, "\\'") : ''}', '${p.content ? p.content.replace(/'/g, "\\'").substring(0, 100) : ''}')" class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">편집</button>
+              <button onclick="deleteAdminPost(${p.id})" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        console.error(e);
+        alert('게시글 목록 로드 실패: ' + e.message);
+      }
+    }
+
+    // 게시글 편집 모달 열기
+    function openEditPostModal(id, title, content) {
+      const modal = $('#editPostModal');
+      if (!modal) return;
+      
+      $('#editPostId').value = id;
+      $('#editPostTitle').value = title;
+      $('#editPostContent').value = content;
+      modal.classList.remove('hidden');
+    }
+
+    // 게시글 편집 모달 닫기
+    function closeEditPostModal() {
+      const modal = $('#editPostModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    // 게시글 저장 (관리자)
+    $('#editPostForm')?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const id = parseInt($('#editPostId').value, 10);
+      const title = $('#editPostTitle').value.trim();
+      const content = $('#editPostContent').value.trim();
+
+      try {
+        const res = await fetch(`/api/admin/posts/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title, content }),
+          credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        alert('게시글이 수정되었습니다.');
+        closeEditPostModal();
+        loadAdminPosts();
+      } catch (e) {
+        console.error(e);
+        alert('수정 실패: ' + e.message);
+      }
+    });
+
+    // 게시글 삭제 (관리자)
+    async function deleteAdminPost(id) {
+      if (!confirm('이 게시글을 삭제하시겠습니까?')) return;
+
+      try {
+        const res = await fetch(`/api/admin/posts/${id}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        alert('게시글이 삭제되었습니다.');
+        loadAdminPosts();
+      } catch (e) {
+        console.error(e);
+        alert('삭제 실패: ' + e.message);
+      }
+    }
+
+    // 관리자: 회원 목록 로드
+    async function loadAdminUsers() {
+      try {
+        const res = await fetch('/api/admin/users', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const tbody = $('#admin-users-list');
+        tbody.innerHTML = '';
+        json.users.forEach(u => {
+          const row = document.createElement('tr');
+          row.className = 'hover:bg-gray-50';
+          const adminStatus = u.is_admin ? '👑 관리자' : '일반 사용자';
+          const toggleBtnText = u.is_admin ? '권한 해제' : '관리자 설정';
+          const toggleBtnClass = u.is_admin ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-green-500 hover:bg-green-600';
+          
+          // 자신의 행에서는 권한 변경 버튼 비활성화
+          const isOwnRow = currentUser && currentUser.id === u.id;
+          
+          row.innerHTML = `
+            <td class="px-4 py-2">${u.id}</td>
+            <td class="px-4 py-2">${u.username}</td>
+            <td class="px-4 py-2 max-w-xs truncate">${u.email}</td>
+            <td class="px-4 py-2 text-sm">${adminStatus}</td>
+            <td class="px-4 py-2 text-xs text-gray-500">${new Date(u.created).toLocaleString()}</td>
+            <td class="px-4 py-2 flex gap-2">
+              <button onclick="toggleAdminUser(${u.id})" class="px-2 py-1 text-xs text-white rounded ${toggleBtnClass}" ${isOwnRow ? 'disabled' : ''}>${toggleBtnText}</button>
+              <button onclick="deleteAdminUser(${u.id})" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600" ${isOwnRow ? 'disabled' : ''}>삭제</button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+      } catch (e) {
+        console.error(e);
+        alert('회원 목록 로드 실패: ' + e.message);
+      }
+    }
+
+    // 회원 관리자 권한 토글 (관리자)
+    async function toggleAdminUser(userId) {
+      try {
+        const res = await fetch(`/api/admin/users/${userId}/toggle-admin`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        alert(json.message);
+        loadAdminUsers();
+      } catch (e) {
+        console.error(e);
+        alert('권한 변경 실패: ' + e.message);
+      }
+    }
+
+    // 회원 삭제 (관리자)
+    async function deleteAdminUser(userId) {
+      if (!confirm('이 회원을 삭제하시겠습니까?')) return;
+
+      try {
+        const res = await fetch(`/api/admin/users/${userId}`, {
+          method: 'DELETE',
+          credentials: 'same-origin'
+        });
+
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        alert('회원이 삭제되었습니다.');
+        loadAdminUsers();
+      } catch (e) {
+        console.error(e);
+        alert('삭제 실패: ' + e.message);
+      }
+    }
+
+    // 필터 변경 시 자동 검색
+    $('#categoryFilter').addEventListener('change', searchCompanies);
+    $('#typeFilter').addEventListener('change', searchCompanies);
+    $('#searchInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') searchCompanies();
+    });
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      updateHeadSeoMeta();
+      $('#year').textContent = new Date().getFullYear();
+      populatePostCategorySelectors();
+      updateAuthArea();
+      updatePostAuthorLabel();
+
+      const postCategoryFilter = $('#postCategoryFilter');
+      if (postCategoryFilter) {
+        postCategoryFilter.addEventListener('change', () => {
+          if (currentSection === 'posts') loadPosts();
+        });
+      }
+
+      const loginForm = $('#loginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          setAuthError('');
+          const username = $('#loginUsername').value.trim();
+          const password = $('#loginPassword').value;
+          if (!username || !password) {
+            setAuthError('아이디와 비밀번호를 입력해주세요.');
+            return;
+          }
+          try {
+            const res = await fetch('/api/auth/login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username, password }),
+              credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+              throw new Error(json.error || '로그인에 실패했습니다.');
+            }
+            setAuthState(json.user);
+            closeAuthModal();
+            if (currentSection === 'posts') {
+              loadPosts();
+            }
+          } catch (err) {
+            console.error(err);
+            setAuthError(err.message || '로그인에 실패했습니다.');
+          }
+        });
+      }
+
+      const registerForm = $('#registerForm');
+      if (registerForm) {
+        registerForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          setAuthError('');
+          const username = $('#registerUsername').value.trim();
+          const emailField = $('#registerEmail');
+          const passwordField = $('#registerPassword');
+          const email = emailField ? emailField.value.trim() : '';
+          const password = passwordField ? passwordField.value : '';
+          if (!username || !email || !password) {
+            setAuthError('아이디, 이메일, 비밀번호를 모두 입력해주세요.');
+            return;
+          }
+          if (username.length < 3 || username.length > 20) {
+            setAuthError('아이디는 3~20자의 영문/숫자/_.-만 사용할 수 있습니다.');
+            return;
+          }
+          const emailPattern = /^[\w.!#$%&'*+/=?`{|}~-]+@[\w-]+(?:\.[\w-]+)+$/;
+          if (!emailPattern.test(email)) {
+            setAuthError('올바른 이메일 주소를 입력해주세요.');
+            return;
+          }
+          if (password.length < 6 || password.length > 64) {
+            setAuthError('비밀번호는 6~64자로 입력해주세요.');
+            return;
+          }
+          try {
+            const res = await fetch('/api/auth/register', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ username, email, password }),
+              credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+              throw new Error(json.error || '회원가입에 실패했습니다.');
+            }
+            setAuthState(json.user);
+            closeAuthModal();
+            if (currentSection === 'posts') {
+              loadPosts();
+            }
+          } catch (err) {
+            console.error(err);
+            setAuthError(err.message || '회원가입에 실패했습니다.');
+          }
+        });
+      }
+
+      const resetRequestForm = $('#resetRequestForm');
+      if (resetRequestForm) {
+        resetRequestForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          setResetRequestMessage('');
+          const emailField = $('#resetEmail');
+          const email = emailField ? emailField.value.trim() : '';
+          if (!email) {
+            setResetRequestMessage('이메일을 입력해주세요.', 'error');
+            return;
+          }
+          try {
+            const res = await fetch('/api/auth/request-reset', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email }),
+              credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+              throw new Error(json.error || '재설정 요청에 실패했습니다.');
+            }
+            setResetRequestMessage(json.message || '비밀번호 재설정 안내를 확인해주세요.', 'success');
+            const hint = $('#resetDevHint');
+            if (hint) {
+              if (json.resetUrl) {
+                hint.innerHTML = `테스트용 링크: <a href="${json.resetUrl}" class="text-blue-600 hover:underline" target="_blank" rel="noopener">${json.resetUrl}</a>`;
+                hint.hidden = false;
+              } else {
+                hint.textContent = '';
+                hint.hidden = true;
+              }
+            }
+            if (json.token) {
+              openResetCompleteModal(json.token);
+            }
+          } catch (err) {
+            console.error(err);
+            setResetRequestMessage(err.message || '재설정 요청에 실패했습니다.', 'error');
+          }
+        });
+      }
+
+      const resetCompleteForm = $('#resetCompleteForm');
+      if (resetCompleteForm) {
+        resetCompleteForm.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          setResetCompleteMessage('');
+          const tokenField = $('#resetToken');
+          const passwordField = $('#resetPassword');
+          const token = tokenField ? tokenField.value.trim() : '';
+          const password = passwordField ? passwordField.value : '';
+          if (!token || !password) {
+            setResetCompleteMessage('토큰과 새 비밀번호를 모두 입력해주세요.', 'error');
+            return;
+          }
+          if (password.length < 6 || password.length > 64) {
+            setResetCompleteMessage('비밀번호는 6~64자로 입력해주세요.', 'error');
+            return;
+          }
+          try {
+            const res = await fetch('/api/auth/reset-password', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token, password }),
+              credentials: 'same-origin'
+            });
+            const json = await res.json();
+            if (!res.ok || !json.success) {
+              throw new Error(json.error || '비밀번호 변경에 실패했습니다.');
+            }
+            setResetCompleteMessage(json.message || '비밀번호가 변경되었습니다.', 'success');
+            setTimeout(() => {
+              closeResetCompleteModal();
+              openAuthModal('login');
+            }, 1500);
+          } catch (err) {
+            console.error(err);
+            setResetCompleteMessage(err.message || '비밀번호 변경에 실패했습니다.', 'error');
+          }
+        });
+      }
+
+      const currentUrl = new URL(window.location.href);
+      if (currentUrl.pathname === '/reset-password') {
+        const tokenParam = currentUrl.searchParams.get('token') || '';
+        openResetCompleteModal(tokenParam);
+        if (!tokenParam) {
+          setResetCompleteMessage('토큰이 확인되지 않았습니다. 이메일로 받은 링크를 다시 확인해주세요.', 'error');
+        }
+        window.history.replaceState(null, '', '/');
+        updateHeadSeoMeta();
+      }
+
+      await fetchCurrentUser();
+
+      const companyParam = currentUrl.searchParams.get('company');
+      const postParam = currentUrl.searchParams.get('post');
+      const initialSection = companyParam ? 'companies' : (postParam ? 'posts' : 'companies');
+      showSection(initialSection);
+
+      if (companyParam) {
+        await showCompanyDetail(companyParam);
+        currentUrl.searchParams.delete('company');
+        const newSearch = currentUrl.searchParams.toString();
+        const newPath = newSearch ? `${currentUrl.pathname}?${newSearch}` : currentUrl.pathname;
+        window.history.replaceState(null, '', newPath === '' ? '/' : newPath);
+        updateHeadSeoMeta();
+      } else if (postParam) {
+        await showPostDetail(postParam);
+        currentUrl.searchParams.delete('post');
+        const newSearch = currentUrl.searchParams.toString();
+        const newPath = newSearch ? `${currentUrl.pathname}?${newSearch}` : currentUrl.pathname;
+        window.history.replaceState(null, '', newPath === '' ? '/' : newPath);
+        updateHeadSeoMeta();
+      }
+    });
+  </script>
+</body>
+</html>

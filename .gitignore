@@ -1,0 +1,4 @@
+node_modules/
+community.db
+npm-debug.log*
+.DS_Store
