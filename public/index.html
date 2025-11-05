@@ -88,7 +88,7 @@
           <option value="fraud">사기업체</option>
           <option value="other">기타</option>
         </select>
-  <input id="searchInput" name="q" type="search" placeholder="업체명 검색..." class="border rounded px-3 py-2 flex-1 min-w-0" autocomplete="off" autocapitalize="none" spellcheck="false">
+  <input id="searchInput" name="company_search" type="search" placeholder="업체명 검색..." class="border rounded px-3 py-2 flex-1 min-w-0" autocomplete="off" autocapitalize="none" autocorrect="off" aria-autocomplete="none" enterkeyhint="search" spellcheck="false" data-1p-ignore>
         <button onclick="searchCompanies()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">검색</button>
       </div>
     </div>
@@ -1829,6 +1829,20 @@
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
+      // 검색창 자동채움 억제 및 초기화 (초기 로드 시만)
+      try {
+        const s = $('#searchInput');
+        if (s) {
+          s.setAttribute('autocomplete', 'off');
+          s.setAttribute('autocorrect', 'off');
+          s.setAttribute('aria-autocomplete', 'none');
+          s.value = '';
+          // 일부 브라우저 자동채움 방지: 잠깐 readonly 후 해제
+          s.setAttribute('readonly', 'readonly');
+          setTimeout(() => s.removeAttribute('readonly'), 200);
+        }
+      } catch (_) { /* noop */ }
+
       updateHeadSeoMeta();
       $('#year').textContent = new Date().getFullYear();
       populatePostCategorySelectors();
