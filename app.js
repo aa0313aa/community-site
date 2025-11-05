@@ -1231,7 +1231,7 @@ app.get('/api/mypage/posts', requireAuth, async (req, res) => {
     }
     
     const posts = await dbAll(`
-      SELECT id, title, content, category as section, views, created, 
+      SELECT id, title, content, category as section, created, 
              (SELECT COUNT(*) FROM post_comments WHERE post_id = posts.id) AS comment_count
       FROM posts
       WHERE writer = ?

@@ -2092,7 +2092,7 @@
             </div>
             <p class="text-gray-600 text-sm mb-2">${escapeHtml(post.content.substring(0, 100))}...</p>
             <div class="flex justify-between items-center text-xs text-gray-500">
-              <span>👁️ ${post.views || 0} | 💬 ${post.comment_count || 0}</span>
+              <span> ${post.comment_count || 0}</span>
               <span>${new Date(post.created).toLocaleString()}</span>
             </div>
           </div>
