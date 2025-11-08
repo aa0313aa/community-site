@@ -1688,20 +1688,20 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
       return res.status(400).json({ success: false, error: '새 비밀번호는 8자 이상이어야 합니다.' });
     }
 
-    const user = await dbGet('SELECT id, password FROM users WHERE id = ?', [req.session.user.id]);
+    const user = await dbGet('SELECT id, password_hash FROM users WHERE id = ?', [req.session.user.id]);
     if (!user) {
       return res.status(404).json({ success: false, error: '사용자를 찾을 수 없습니다.' });
     }
 
     // 현재 비밀번호 확인
-    const isMatch = await bcrypt.compare(currentPassword, user.password);
+    const isMatch = await bcrypt.compare(currentPassword, user.password_hash);
     if (!isMatch) {
       return res.status(400).json({ success: false, error: '현재 비밀번호가 일치하지 않습니다.' });
     }
 
     // 새 비밀번호 해시화
     const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await dbRun('UPDATE users SET password = ? WHERE id = ?', [hashedPassword, req.session.user.id]);
+    await dbRun('UPDATE users SET password_hash = ? WHERE id = ?', [hashedPassword, req.session.user.id]);
 
     res.json({ success: true, message: '비밀번호가 변경되었습니다.' });
   } catch (e) {
