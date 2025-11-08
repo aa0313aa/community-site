@@ -849,6 +849,12 @@ ${entries.map((entry) => `  <url>
   </url>`).join('\n')}
 </urlset>`;
 
+    // 개발 중에는 캐시하지 않도록 헤더 설정, 운영에서는 1시간 캐싱
+    if (process.env.NODE_ENV !== 'production') {
+      res.set('Cache-Control', 'no-store');
+    } else {
+      res.set('Cache-Control', 'public, max-age=3600');
+    }
     res.type('application/xml; charset=utf-8').send(xml);
   } catch (err) {
     console.error('Sitemap 생성 오류', err);
