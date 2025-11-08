@@ -1098,13 +1098,18 @@ app.get('/companies/:id', async (req, res) => {
     const metaDescription = buildMetaDescription(company.description, `${company.name} ${categoryLabel} ${typeLabel} 정보`);
     const structuredData = JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': 'FinancialService',
+      '@type': ['FinancialService','LocalBusiness'],
       name: company.name,
       url: canonical,
       description: metaDescription,
       telephone: company.phone || undefined,
-      areaServed: 'South Korea',
+      areaServed: 'KR',
       serviceType: `${categoryLabel} · ${typeLabel}`,
+      address: {
+        '@type': 'PostalAddress',
+        addressCountry: 'KR'
+      },
+      sameAs: company.website ? [company.website] : undefined,
       datePublished: toIsoDate(company.created),
       dateModified: toIsoDate(company.created),
       aggregateRating: company.rating ? {
@@ -1210,19 +1215,27 @@ app.get('/posts/:id', async (req, res) => {
     const metaDescription = buildMetaDescription(post.content, `${post.writer || '익명'}님의 자유게시판 글`);
     const structuredData = JSON.stringify({
       '@context': 'https://schema.org',
-      '@type': 'BlogPosting',
+      '@type': ['Article','BlogPosting'],
       headline: post.title || '자유게시판 글',
+      name: post.title || '자유게시판 글',
+      articleSection: post.category || 'free',
+      inLanguage: 'ko-KR',
       articleBody: post.content,
       author: post.writer ? {
         '@type': 'Person',
         name: post.writer
-      } : undefined,
+      } : { '@type':'Organization', name:'익명' },
       url: canonical,
+      mainEntityOfPage: canonical,
       datePublished: toIsoDate(post.created),
       dateModified: toIsoDate(post.created),
       publisher: {
         '@type': 'Organization',
-        name: '업체정보 커뮤니티'
+        name: '업체정보 커뮤니티',
+        logo: {
+          '@type': 'ImageObject',
+          url: `${baseUrl}/logo.png`
+        }
       }
     });
 
@@ -1539,6 +1552,27 @@ app.get('/api/mypage/comments', requireAuth, async (req, res) => {
   } catch (e) {
     console.error('내 댓글 조회 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 최근 항목 (SEO 내부링크 강화용)
+app.get('/api/latest/posts', async (req, res) => {
+  try {
+    const rows = await dbAll(`SELECT id, title, writer, created FROM posts WHERE is_hidden = 0 ORDER BY id DESC LIMIT 8`);
+    res.json({ success: true, posts: rows || [] });
+  } catch (e) {
+    console.error('최근 게시글 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류' });
+  }
+});
+
+app.get('/api/latest/companies', async (req, res) => {
+  try {
+    const rows = await dbAll(`SELECT id, name, category, type, is_certified, rating, created FROM companies ORDER BY id DESC LIMIT 8`);
+    res.json({ success: true, companies: rows || [] });
+  } catch (e) {
+    console.error('최근 업체 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류' });
   }
 });
 

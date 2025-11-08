@@ -127,6 +127,32 @@
           🟢 정상업체 | 🔴 사기업체 | ⚪ 기타 | 💳 신용카드 | 📱 소액결제 | ⚠️ 사기사이트 | ❔ 기타 카테고리
         </div>
       </div>
+      <!-- 최근 항목 블록 -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-gray-800">최근 게시글</h3>
+            <button onclick="showSection('posts')" class="text-sm text-blue-600 hover:underline">더보기</button>
+          </div>
+          <div id="latestPosts" class="space-y-3">
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+          </div>
+        </div>
+        <div class="bg-white rounded-lg p-4 shadow">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-gray-800">최근 업체</h3>
+            <button onclick="showSection('companies')" class="text-sm text-blue-600 hover:underline">목록보기</button>
+          </div>
+          <div id="latestCompanies" class="space-y-3">
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+            <div class="h-4 bg-gray-200 rounded skeleton"></div>
+          </div>
+        </div>
+      </div>
+
       <div id="companies" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
     </section>
 
@@ -926,6 +952,7 @@
       currentSection = section;
 
       if (section === 'companies') {
+        try { loadLatest(); } catch(_) {}
         loadCompanies();
       } else if (section === 'posts') {
         loadPosts();
@@ -1124,6 +1151,53 @@
       if (currentSection === 'companies') {
         loadCompanies();
       }
+    }
+
+    // 최근 항목 로드 (게시글/업체)
+    async function loadLatest() {
+      // 최근 게시글
+      try {
+        const r = await fetch('/api/latest/posts');
+        const d = await r.json();
+        const wrap = document.getElementById('latestPosts');
+        if (wrap) {
+          wrap.innerHTML = '';
+          (d.posts || []).forEach(p => {
+            const el = document.createElement('div');
+            el.className = 'p-3 bg-white border rounded hover:bg-blue-50 cursor-pointer shadow-sm';
+            const created = p.created ? new Date(p.created).toLocaleDateString() : '';
+            el.innerHTML = `<div class="font-semibold text-sm line-clamp-2">${escapeHtml(p.title || '(제목 없음)')}</div>
+              <div class="text-[12px] text-gray-600">${escapeHtml(p.writer || '익명')} · ${created}</div>`;
+            el.onclick = () => { showPostDetail(p.id); };
+            wrap.appendChild(el);
+          });
+          if (!wrap.children.length) {
+            wrap.innerHTML = '<div class="text-sm text-gray-500">게시글이 없습니다.</div>';
+          }
+        }
+      } catch(e) { console.warn('최근 게시글 로드 실패', e); }
+
+      // 최근 업체
+      try {
+        const r = await fetch('/api/latest/companies');
+        const d = await r.json();
+        const wrap = document.getElementById('latestCompanies');
+        if (wrap) {
+          wrap.innerHTML = '';
+          (d.companies || []).forEach(c => {
+            const el = document.createElement('div');
+            el.className = 'p-3 bg-white border rounded hover:bg-green-50 cursor-pointer shadow-sm';
+            const badge = (c.type === 'safe' && c.is_certified) ? '<span class="ml-2 cert-badge"><span class="icon">✅</span><span>관리자 인증</span></span>' : '';
+            el.innerHTML = `<div class="text-sm font-medium flex items-center flex-wrap">${escapeHtml(c.name)}${badge}</div>
+              <div class="text-[12px] text-gray-600">${escapeHtml(c.category || '')} · ${c.type === 'fraud' ? '사기업체' : '정상업체'} · 평점: ${c.rating ?? 0}</div>`;
+            el.onclick = () => { showCompanyDetail(c.id); };
+            wrap.appendChild(el);
+          });
+          if (!wrap.children.length) {
+            wrap.innerHTML = '<div class="text-sm text-gray-500">업체가 없습니다.</div>';
+          }
+        }
+      } catch(e) { console.warn('최근 업체 로드 실패', e); }
     }
 
     // 업체 상세 정보 표시
