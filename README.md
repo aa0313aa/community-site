@@ -2,6 +2,32 @@
 
 소액결제 및 신용카드 업체들의 정상/사기 정보를 공유하는 커뮤니티 사이트입니다.
 
+## 기능 요약 및 최신 개선
+
+- 회원가입 / 로그인 / 로그아웃 / 비밀번호 재설정
+- 업체 등록 / 목록 / 상세(SSR SEO) / 리뷰 & 신고 / 관리자 정상업체 인증 뱃지
+- 자유게시판 글 작성 / 댓글 / 게시글 숨김(관리자) & 공개 처리
+- 마이페이지: 내 글 / 내 댓글 / 내 업체 / 비밀번호 변경
+- JSON 404 API Fallback (마지막 라우트)로 일관된 에러 포맷 유지
+- 구조화 데이터: Article + BlogPosting (게시글), LocalBusiness + FinancialService (업체), WebSite (홈)
+- 최신 항목 내부링크 블록: 최근 게시글 / 최근 업체 메인 상단 카드
+- /api/latest/posts, /api/latest/companies 60초 메모리 캐싱 → DB 부하 감소
+- 동적 sitemap: 최신 5개 업체/게시글 priority=0.9, 기타 0.5 (신선도 가중치)
+- 버튼 클릭 시 해당 섹션 하이라이트(UX 개선)
+
+## 추가된 API (Latest & SEO)
+
+- GET /api/latest/posts : 최신 공개 게시글 8개 (캐시 60초)
+- GET /api/latest/companies : 최신 업체 8개 (캐시 60초)
+- GET /sitemap.xml : 최신 5개 업체/게시글 priority 상향(0.9) + lastmod + changefreq
+
+## 성능 & SEO 메모
+
+- 최신 Endpoint 캐싱(TTL=60s)으로 반복 호출 비용 절감
+- 구조화 데이터 + hreflang + canonical 설정으로 검색엔진 인덱싱 속도 향상
+- Sitemap 우선순위로 신선한 컨텐츠 상대적 중요도 부각
+- robots.txt: 주요 봇 허용 / 일부 분석 봇 차단 (AhrefsBot, SemrushBot)
+
 ## 🌐 도메인
 
  최근 항목 내부링크 강화: /api/latest/posts, /api/latest/companies + 메인 섹션 카드

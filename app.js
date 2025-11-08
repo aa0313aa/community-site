@@ -19,6 +19,13 @@ app.set('trust proxy', 1);
 // 자유게시판 카테고리 (향후 확장 가능)
 const POST_CATEGORIES = ['free'];
 
+// 간단한 메모리 캐시 (최신 항목용)
+const latestCache = {
+  posts: { data: null, ts: 0 },
+  companies: { data: null, ts: 0 }
+};
+const LATEST_TTL_MS = 60 * 1000; // 60초
+
 // DB 선택: DATABASE_URL이 있으면 Postgres, 없으면 SQLite
 const DATABASE_URL = process.env.DATABASE_URL && process.env.DATABASE_URL.trim();
 const usePg = !!DATABASE_URL;
@@ -809,23 +816,23 @@ app.get('/sitemap.xml', async (req, res) => {
       priority: '0.95' 
     });
     
-    // 업체 페이지 (주간 업데이트)
-    companyRows.forEach((row) => {
+    // 업체 페이지 (주간 업데이트) - 최신 5개 priority 상향
+    companyRows.forEach((row, idx) => {
       entries.push({
         loc: `${baseUrl}/companies/${row.id}`,
         lastmod: toIsoDate(row.created),
         changefreq: 'weekly',
-        priority: '0.8'
+        priority: idx < 5 ? '0.9' : '0.5'
       });
     });
     
-    // 게시글 페이지 (일일 업데이트)
-    postRows.forEach((row) => {
+    // 게시글 페이지 (일일 업데이트) - 최신 5개 priority 상향
+    postRows.forEach((row, idx) => {
       entries.push({
         loc: `${baseUrl}/posts/${row.id}`,
         lastmod: toIsoDate(row.created),
         changefreq: 'daily',
-        priority: '0.7'
+        priority: idx < 5 ? '0.9' : '0.5'
       });
     });
 
@@ -1558,8 +1565,13 @@ app.get('/api/mypage/comments', requireAuth, async (req, res) => {
 // 최근 항목 (SEO 내부링크 강화용)
 app.get('/api/latest/posts', async (req, res) => {
   try {
+    const now = Date.now();
+    if (latestCache.posts.data && (now - latestCache.posts.ts) < LATEST_TTL_MS) {
+      return res.json({ success: true, posts: latestCache.posts.data });
+    }
     const rows = await dbAll(`SELECT id, title, writer, created FROM posts WHERE is_hidden = 0 ORDER BY id DESC LIMIT 8`);
-    res.json({ success: true, posts: rows || [] });
+    latestCache.posts = { data: rows || [], ts: now };
+    res.json({ success: true, posts: latestCache.posts.data });
   } catch (e) {
     console.error('최근 게시글 조회 오류', e);
     res.status(500).json({ success: false, error: '서버 오류' });
@@ -1568,8 +1580,13 @@ app.get('/api/latest/posts', async (req, res) => {
 
 app.get('/api/latest/companies', async (req, res) => {
   try {
+    const now = Date.now();
+    if (latestCache.companies.data && (now - latestCache.companies.ts) < LATEST_TTL_MS) {
+      return res.json({ success: true, companies: latestCache.companies.data });
+    }
     const rows = await dbAll(`SELECT id, name, category, type, is_certified, rating, created FROM companies ORDER BY id DESC LIMIT 8`);
-    res.json({ success: true, companies: rows || [] });
+    latestCache.companies = { data: rows || [], ts: now };
+    res.json({ success: true, companies: latestCache.companies.data });
   } catch (e) {
     console.error('최근 업체 조회 오류', e);
     res.status(500).json({ success: false, error: '서버 오류' });
