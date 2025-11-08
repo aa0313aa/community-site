@@ -53,6 +53,25 @@
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 text-gray-900">
+  <!-- 글로벌 초기 로딩 오버레이 -->
+  <div id="initial-loader" style="position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;background:#f8fafc">
+    <div style="text-align:center;font-family:system-ui,Segoe UI,Arial,sans-serif">
+      <div style="width:56px;height:56px;border:6px solid #dbeafe;border-top-color:#1d4ed8;border-radius:50%;animation:spin 0.9s linear infinite;margin:0 auto 16px"></div>
+      <p style="font-size:14px;color:#1e3a8a;margin:0">초기 로딩 중입니다...</p>
+      <p style="font-size:12px;color:#64748b;margin-top:4px">첫 접속 시(서버 깨우기) 최대 몇 초 걸릴 수 있어요</p>
+    </div>
+  </div>
+  <style>
+    @keyframes spin { from { transform: rotate(0deg);} to { transform: rotate(360deg);} }
+    .skeleton { position:relative; overflow:hidden; background:#e2e8f0; }
+    .skeleton::after { content:""; position:absolute; inset:0; background:linear-gradient(90deg,rgba(226,232,240,0) 0%,rgba(255,255,255,0.6) 50%,rgba(226,232,240,0) 100%); animation:skeletonMove 1.4s infinite; }
+    @keyframes skeletonMove { 0% { transform:translateX(-100%);} 100% { transform:translateX(100%);} }
+    .fade-out { opacity:0; transition:opacity .5s ease; pointer-events:none; }
+    .cert-badge { display:inline-flex; align-items:center; gap:6px; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; color:#065f46; background:linear-gradient(90deg,#d1fae5,#a7f3d0); box-shadow:0 0 0 1px rgba(5,150,105,.2) inset; }
+    .cert-badge .icon { filter: drop-shadow(0 1px 0 rgba(0,0,0,.08)); }
+    .cert-banner { display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; background:linear-gradient(90deg,#ecfdf5,#d1fae5); color:#065f46; font-weight:600; box-shadow:inset 0 0 0 1px rgba(5,150,105,.15); }
+    .cert-banner .icon { font-size:18px; }
+  </style>
   <header class="bg-white border-b shadow-sm">
     <div class="max-w-6xl mx-auto px-4 py-4">
         <div>
@@ -61,7 +80,7 @@
         <div class="flex flex-wrap items-center gap-3">
           <nav class="space-x-2 text-sm">
             <button onclick="showSection('companies')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">업체목록</button>
-            <button onclick="showSection('add-company')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">업체등록</button>
+            <button id="addCompanyBtn" onclick="showSection('add-company')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 hidden">업체등록</button>
             <button onclick="showSection('posts')" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">자유게시판</button>
             <a href="/trending" class="inline-block px-4 py-2 border border-blue-300 text-blue-600 rounded hover:bg-blue-50">사기 정보 공유</a>
             <button id="mypageBtn" onclick="showSection('mypage')" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 hidden">마이페이지</button>
@@ -206,6 +225,7 @@
         <!-- 탭 -->
         <div class="flex gap-2 mb-4 border-b">
           <button onclick="switchAdminTab('posts')" class="admin-tab-btn px-4 py-2 border-b-2 border-red-600 text-red-600 font-semibold" data-tab="posts">게시글 관리</button>
+          <button onclick="switchAdminTab('companies')" class="admin-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="companies">업체 관리</button>
           <button onclick="switchAdminTab('users')" class="admin-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="users">회원 관리</button>
         </div>
 
@@ -224,6 +244,27 @@
                 </tr>
               </thead>
               <tbody id="admin-posts-list" class="divide-y"></tbody>
+            </table>
+          </div>
+        </div>
+        <div id="admin-companies-tab" class="admin-tab hidden">
+          <div class="overflow-x-auto bg-white rounded shadow">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-100">
+                <tr>
+                  <th class="px-4 py-2 text-left">ID</th>
+                  <th class="px-4 py-2 text-left">업체명</th>
+                  <th class="px-4 py-2 text-left">분류</th>
+                  <th class="px-4 py-2 text-left">카테고리</th>
+                  <th class="px-4 py-2 text-left">평점</th>
+                  <th class="px-4 py-2 text-left">신고</th>
+                  <th class="px-4 py-2 text-left">작성자</th>
+                  <th class="px-4 py-2 text-left">등록일</th>
+                  <th class="px-4 py-2 text-left">인증</th>
+                  <th class="px-4 py-2 text-left">조치</th>
+                </tr>
+              </thead>
+              <tbody id="admin-companies-list" class="divide-y"></tbody>
             </table>
           </div>
         </div>
@@ -258,6 +299,7 @@
         <div class="flex border-b mb-6">
           <button onclick="switchMypageTab('myinfo')" class="mypage-tab-btn px-4 py-2 border-b-2 border-purple-600 text-purple-600 font-semibold" data-tab="myinfo">내 정보</button>
           <button onclick="switchMypageTab('myposts')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="myposts">내가 쓴 글</button>
+          <button onclick="switchMypageTab('mycompanies')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="mycompanies">내 업체</button>
           <button onclick="switchMypageTab('mycomments')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="mycomments">내가 쓴 댓글</button>
           <button onclick="switchMypageTab('changepw')" class="mypage-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="changepw">비밀번호 변경</button>
         </div>
@@ -287,6 +329,11 @@
           <div id="mypage-comments-list" class="space-y-4">
             <p class="text-gray-500">로딩 중...</p>
           </div>
+        </div>
+
+        <!-- 내가 등록한 업체 탭 -->
+        <div id="mypage-mycompanies-tab" class="mypage-tab hidden">
+          <div id="mypage-companies-list" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
         </div>
 
         <!-- 비밀번호 변경 탭 -->
@@ -605,6 +652,7 @@
       const area = $('#authArea');
       const adminBtn = $('#adminMenuBtn');
       const mypageBtn = $('#mypageBtn');
+      const addCompanyBtn = $('#addCompanyBtn');
       if (!area) return;
       
       // 관리자 메뉴 표시 여부 업데이트
@@ -622,6 +670,13 @@
           mypageBtn.classList.remove('hidden');
         } else {
           mypageBtn.classList.add('hidden');
+        }
+      }
+      if (addCompanyBtn) {
+        if (currentUser) {
+          addCompanyBtn.classList.remove('hidden');
+        } else {
+          addCompanyBtn.classList.add('hidden');
         }
       }
       
@@ -850,6 +905,11 @@
         alert('로그인이 필요합니다.');
         return;
       }
+      if (section === 'add-company' && !currentUser) {
+        alert('업체 등록은 로그인 후 이용 가능합니다.');
+        openAuthModal('login');
+        return;
+      }
 
       // 관리자 권한 확인
       if (section === 'admin' && (!currentUser || !currentUser.is_admin)) {
@@ -946,9 +1006,34 @@
     }
 
     // 업체 목록 로드
+    function renderCompanySkeletons(count=6) {
+      const box = $('#companies');
+      box.innerHTML = '';
+      for (let i=0;i<count;i++) {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'bg-white border rounded-lg p-4 shadow';
+        wrapper.innerHTML = `
+          <div class="flex justify-between mb-3">
+            <div class="skeleton h-6 w-2/3 rounded"></div>
+            <div class="skeleton h-6 w-10 rounded"></div>
+          </div>
+          <div class="space-y-2 mb-3">
+            <div class="skeleton h-4 w-full rounded"></div>
+            <div class="skeleton h-4 w-5/6 rounded"></div>
+            <div class="skeleton h-4 w-3/4 rounded"></div>
+          </div>
+          <div class="skeleton h-20 w-full rounded mb-3"></div>
+          <div class="flex justify-between items-center">
+            <div class="skeleton h-4 w-24 rounded"></div>
+            <div class="skeleton h-4 w-16 rounded"></div>
+          </div>`;
+        box.appendChild(wrapper);
+      }
+    }
+
     async function loadCompanies() {
       const box = $('#companies');
-      box.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">로딩중...</div>';
+      renderCompanySkeletons();
       
       try {
         const category = $('#categoryFilter').value;
@@ -968,7 +1053,7 @@
         box.innerHTML = '';
         
         if (json.companies.length === 0) {
-          box.innerHTML = '<div class="col-span-full text-center py-8 text-gray-500">등록된 업체가 없습니다.</div>';
+          box.innerHTML = '<div class="col-span-full text-center py-16 text-gray-500">등록된 업체가 없습니다.</div>';
           return;
         }
         
@@ -978,7 +1063,14 @@
           
           card.onclick = () => showCompanyDetail(company.id);
           
-          node.querySelector('[data-role="name"]').textContent = company.name;
+          const nameEl = node.querySelector('[data-role="name"]');
+          nameEl.textContent = company.name;
+          if (company.type === 'safe' && company.is_certified) {
+            const badge = document.createElement('span');
+            badge.className = 'ml-2 cert-badge';
+            badge.innerHTML = '<span class="icon">✅</span><span>관리자 인증</span>';
+            nameEl.after(badge);
+          }
           node.querySelector('[data-role="icon"]').textContent = getCompanyIcon(company.category, company.type);
           node.querySelector('[data-role="category-type"]').textContent = `${getCategoryText(company.category)} · ${getTypeText(company.type)}`;
           node.querySelector('[data-role="rating"]').textContent = getRatingText(company.rating);
@@ -1023,7 +1115,7 @@
         });
       } catch (e) {
         console.error(e);
-        box.innerHTML = '<div class="col-span-full text-center py-8 text-red-600">목록을 불러오지 못했습니다.</div>';
+        box.innerHTML = '<div class="col-span-full text-center py-16 text-red-600">목록을 불러오지 못했습니다.</div>';
       }
     }
 
@@ -1041,7 +1133,7 @@
 
       currentSection = 'companies';
       
-      detail.innerHTML = '<div class="text-center py-8">로딩중...</div>';
+  detail.innerHTML = '<div class="text-center py-8">로딩중...</div>';
       modal.classList.remove('hidden');
       
       try {
@@ -1058,7 +1150,7 @@
               <div>
                 <h2 class="text-2xl font-bold">${company.name}</h2>
                 <div class="text-lg mt-1">
-                  ${getCompanyIcon(company.category, company.type)} ${getCategoryText(company.category)} · ${getTypeText(company.type)}
+                  ${getCompanyIcon(company.category, company.type)} ${getCategoryText(company.category)} · ${getTypeText(company.type)}${company.type === 'safe' && company.is_certified ? ' · ✅ 인증됨' : ''}
                 </div>
               </div>
               <button onclick="closeCompanyModal()" class="text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
@@ -1194,6 +1286,7 @@
       const container = section.querySelector('[data-role="comment-form"]');
       if (!container) return;
 
+      // 비로그인 상태면 로그인 안내 표시 후 종료
       if (!currentUser) {
         container.innerHTML = `
           <div class="border border-dashed border-gray-300 rounded-lg px-4 py-3 bg-gray-50 text-sm text-gray-600">
@@ -1201,9 +1294,7 @@
           </div>
         `;
         const loginBtn = container.querySelector('[data-action="open-login"]');
-        if (loginBtn) {
-          loginBtn.addEventListener('click', () => openAuthModal('login'));
-        }
+        if (loginBtn) loginBtn.addEventListener('click', () => openAuthModal('login'));
         return;
       }
 
@@ -1219,8 +1310,8 @@
         </form>
       `;
 
-      const form = container.querySelector(`#${formId}`);
-      if (!form) return;
+  const form = container.querySelector(`#${formId}`);
+  if (!form) return;
       form.addEventListener('submit', async (e) => {
         e.preventDefault();
         const textarea = form.querySelector(`#${textareaId}`);
@@ -1371,6 +1462,11 @@
     // 업체 등록
     $('#companyForm').addEventListener('submit', async (e) => {
       e.preventDefault();
+      if (!currentUser) {
+        alert('업체 등록은 로그인 후 이용 가능합니다.');
+        openAuthModal('login');
+        return;
+      }
       
       const name = $('#companyName').value.trim();
       const category = $('#companyCategory').value;
@@ -1381,7 +1477,7 @@
       const messenger_id = $('#companyMessengerId').value.trim();
       const description = $('#companyDescription').value.trim();
       const rating = $('#companyRating').value;
-      const writer = $('#companyWriter').value.trim();
+  const writer = $('#companyWriter').value.trim();
       
       if (!name || !category || !type) {
         alert('필수 정보를 모두 입력해주세요.');
@@ -1648,6 +1744,8 @@
 
       if (tab === 'posts') {
         loadAdminPosts();
+      } else if (tab === 'companies') {
+        loadAdminCompanies();
       } else if (tab === 'users') {
         loadAdminUsers();
       }
@@ -1655,7 +1753,7 @@
 
     // 관리자 대시보드 로드
     async function loadAdminDashboard() {
-      switchAdminTab('posts');
+      switchAdminTab('companies');
     }
 
     // 관리자: 게시글 목록 로드
@@ -1672,13 +1770,14 @@
           row.className = 'hover:bg-gray-50';
           row.innerHTML = `
             <td class="px-4 py-2">${p.id}</td>
-            <td class="px-4 py-2 max-w-xs truncate">${p.title || '(제목 없음)'}</td>
+            <td class="px-4 py-2 max-w-xs truncate">${p.title || '(제목 없음)'} ${p.is_hidden ? '<span class="ml-1 inline-block px-2 py-0.5 text-[10px] font-semibold rounded bg-gray-800 text-white">숨김</span>' : ''}</td>
             <td class="px-4 py-2">${p.writer || '익명'}</td>
             <td class="px-4 py-2 text-xs text-gray-500">${new Date(p.created).toLocaleString()}</td>
             <td class="px-4 py-2 text-center">${p.comment_count || 0}</td>
             <td class="px-4 py-2 flex gap-2">
               <button onclick="openEditPostModal(${p.id}, '${p.title ? p.title.replace(/'/g, "\\'") : ''}', '${p.content ? p.content.replace(/'/g, "\\'").substring(0, 100) : ''}')" class="px-2 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600">편집</button>
               <button onclick="deleteAdminPost(${p.id})" class="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600">삭제</button>
+              ${p.is_hidden ? `<button onclick="unhideAdminPost(${p.id})" class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700">공개</button>` : `<button onclick="hideAdminPost(${p.id})" class="px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700">숨김</button>`}
             </td>
           `;
           tbody.appendChild(row);
@@ -1686,6 +1785,71 @@
       } catch (e) {
         console.error(e);
         alert('게시글 목록 로드 실패: ' + e.message);
+      }
+    }
+
+    // 관리자: 업체 목록 로드
+    async function loadAdminCompanies() {
+      try {
+        const res = await fetch('/api/admin/companies', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error);
+
+        const tbody = $('#admin-companies-list');
+        if (!tbody) return;
+        tbody.innerHTML = '';
+        json.companies.forEach(c => {
+          const tr = document.createElement('tr');
+          tr.className = 'hover:bg-gray-50';
+          tr.innerHTML = `
+            <td class="px-4 py-2">${c.id}</td>
+            <td class="px-4 py-2"><a href="javascript:showCompanyDetail(${c.id})" class="text-blue-600 hover:underline">${escapeHtml(c.name)}</a></td>
+            <td class="px-4 py-2">${c.type === 'fraud' ? '사기업체' : '정상업체'}</td>
+            <td class="px-4 py-2">${escapeHtml(c.category)}</td>
+            <td class="px-4 py-2">${c.rating ?? 0}</td>
+            <td class="px-4 py-2">${c.report_count ?? 0}</td>
+            <td class="px-4 py-2">${escapeHtml(c.writer || '익명')}</td>
+            <td class="px-4 py-2 text-xs text-gray-500">${new Date(c.created).toLocaleString()}</td>
+            <td class="px-4 py-2">${c.type === 'safe' ? (c.is_certified ? '<span class="text-green-700 bg-green-100 text-xs px-2 py-1 rounded">인증됨</span>' : '<span class="text-gray-600 bg-gray-100 text-xs px-2 py-1 rounded">미인증</span>') : '-'}</td>
+            <td class="px-4 py-2">
+              ${c.type === 'safe' ? (
+                c.is_certified
+                  ? `<button class="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600" onclick="uncertifyCompany(${c.id})">해제</button>`
+                  : `<button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700" onclick="certifyCompany(${c.id})">인증</button>`
+              ) : ''}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (e) {
+        console.error(e);
+        alert('업체 목록 로드 실패: ' + e.message);
+      }
+    }
+
+    async function certifyCompany(id) {
+      if (!confirm('이 업체를 정상업체 인증하시겠습니까?')) return;
+      try {
+        const res = await fetch(`/api/admin/companies/${id}/certify`, { method: 'POST', credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '실패');
+        await loadAdminCompanies();
+      } catch (e) {
+        console.error(e);
+        alert('인증 실패: ' + e.message);
+      }
+    }
+
+    async function uncertifyCompany(id) {
+      if (!confirm('이 업체의 인증을 해제하시겠습니까?')) return;
+      try {
+        const res = await fetch(`/api/admin/companies/${id}/uncertify`, { method: 'POST', credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '실패');
+        await loadAdminCompanies();
+      } catch (e) {
+        console.error(e);
+        alert('인증 해제 실패: ' + e.message);
       }
     }
 
@@ -1751,6 +1915,53 @@
       } catch (e) {
         console.error(e);
         alert('삭제 실패: ' + e.message);
+      }
+    }
+
+    // 게시글 숨김 (관리자)
+    async function hideAdminPost(id) {
+      if (!confirm('이 게시글을 숨김 처리하시겠습니까?')) return;
+      try {
+        const res = await fetch(`/api/admin/posts/${id}/hide`, { method: 'POST', credentials: 'same-origin' });
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status} ${res.statusText} - ${text.slice(0,120)}`);
+        }
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '실패');
+        loadAdminPosts();
+      } catch (e) {
+        console.error(e);
+        const msg = String(e.message || '실패');
+        if (msg.includes('401') || msg.includes('403')) {
+          alert('관리자 권한이 필요합니다. 관리자 계정으로 로그인해주세요.');
+        } else {
+          alert('숨김 처리 실패: ' + msg);
+        }
+      }
+    }
+
+    // 게시글 숨김 해제 (관리자)
+    async function unhideAdminPost(id) {
+      try {
+        const res = await fetch(`/api/admin/posts/${id}/unhide`, { method: 'POST', credentials: 'same-origin' });
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+          const text = await res.text();
+          throw new Error(`HTTP ${res.status} ${res.statusText} - ${text.slice(0,120)}`);
+        }
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '실패');
+        loadAdminPosts();
+      } catch (e) {
+        console.error(e);
+        const msg = String(e.message || '실패');
+        if (msg.includes('401') || msg.includes('403')) {
+          alert('관리자 권한이 필요합니다. 관리자 계정으로 로그인해주세요.');
+        } else {
+          alert('공개 처리 실패: ' + msg);
+        }
       }
     }
 
@@ -1841,6 +2052,7 @@
     });
 
     document.addEventListener('DOMContentLoaded', async () => {
+      const perfStart = performance.now();
       // 검색창 자동채움 억제 및 초기화 (초기 로드 시만)
       try {
         const s = $('#searchInput');
@@ -1866,7 +2078,7 @@
         }
       } catch (_) { /* noop */ }
 
-      updateHeadSeoMeta();
+  updateHeadSeoMeta();
       $('#year').textContent = new Date().getFullYear();
       populatePostCategorySelectors();
       updateAuthArea();
@@ -2079,6 +2291,20 @@
         window.history.replaceState(null, '', newPath === '' ? '/' : newPath);
         updateHeadSeoMeta();
       }
+
+      // 초기 목록 선행 요청 (서버 깨우기 목적) + 오버레이 제거
+      try {
+        await loadCompanies();
+      } catch(_) {}
+      const loader = document.getElementById('initial-loader');
+      if (loader) {
+        requestAnimationFrame(()=>{
+          loader.classList.add('fade-out');
+          setTimeout(()=> loader.remove(), 600);
+        });
+      }
+      const perfEnd = performance.now();
+      console.log('[Perf] 초기 로딩 완료(ms):', Math.round(perfEnd - perfStart));
     });
 
     // 마이페이지 함수들
@@ -2112,6 +2338,8 @@
         loadMyInfo();
       } else if (tabName === 'myposts') {
         loadMyPosts();
+      } else if (tabName === 'mycompanies') {
+        loadMyCompanies();
       } else if (tabName === 'mycomments') {
         loadMyComments();
       }
@@ -2136,28 +2364,23 @@
         const res = await fetch('/api/mypage/posts', { credentials: 'same-origin' });
         const json = await res.json();
         if (!json.success) throw new Error(json.error);
-
         const container = $('#mypage-posts-list');
         if (!container) return;
-        
         if (json.posts.length === 0) {
           container.innerHTML = '<p class="text-gray-500">작성한 글이 없습니다.</p>';
           return;
         }
-
         container.innerHTML = json.posts.map(post => `
           <div class="bg-white p-4 border rounded hover:shadow">
             <div class="flex justify-between items-start mb-2">
               <h4 class="text-lg font-semibold text-gray-800">
-                <a href="javascript:showPostDetail(${post.id})" class="text-blue-600 hover:underline">
-                  ${escapeHtml(post.title)}
-                </a>
+                <a href="javascript:showPostDetail(${post.id})" class="text-blue-600 hover:underline">${escapeHtml(post.title)}</a>
               </h4>
               <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">${post.section}</span>
             </div>
             <p class="text-gray-600 text-sm mb-2">${escapeHtml(post.content.substring(0, 100))}...</p>
             <div class="flex justify-between items-center text-xs text-gray-500">
-              <span> ${post.comment_count || 0}</span>
+              <span>${post.comment_count || 0}</span>
               <span>${new Date(post.created).toLocaleString()}</span>
             </div>
           </div>
@@ -2165,9 +2388,7 @@
       } catch (e) {
         console.error(e);
         const container = $('#mypage-posts-list');
-        if (container) {
-          container.innerHTML = `<p class="text-red-500">글 목록 로드 실패: ${e.message}</p>`;
-        }
+        if (container) container.innerHTML = `<p class="text-red-500">글 목록 로드 실패: ${escapeHtml(e.message)}</p>`;
       }
     }
 
@@ -2207,6 +2428,45 @@
           container.innerHTML = `<p class="text-red-500">댓글 목록 로드 실패: ${e.message}</p>`;
         }
       }
+    }
+
+    async function loadMyCompanies() {
+      try {
+        const res = await fetch('/api/mypage/companies', { credentials: 'same-origin' });
+        const json = await res.json();
+        if (!json.success) throw new Error(json.error || '알 수 없는 오류');
+
+        const box = $('#mypage-companies-list');
+        if (!box) return;
+
+        if (!json.companies || json.companies.length === 0) {
+          box.innerHTML = '<div class="col-span-full text-gray-500">등록한 업체가 없습니다.</div>';
+          return;
+        }
+
+        box.innerHTML = json.companies.map(c => `
+          <div class="border rounded p-4 bg-white hover:shadow">
+            <div class="flex justify-between items-start">
+              <h4 class="font-semibold text-gray-800">${escapeHtml(c.name)}</h4>
+              <span class="text-xs px-2 py-1 rounded ${c.type === 'fraud' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}">${c.type === 'fraud' ? '사기업체' : '정상업체'}</span>
+              ${c.type === 'safe' && c.is_certified ? '<span class="ml-2 cert-badge"><span class="icon">✅</span><span>관리자 인증</span></span>' : ''}
+            </div>
+            <p class="mt-1 text-xs text-gray-500">카테고리: ${escapeHtml(c.category)} · 평점: ${c.rating ?? 0} · 신고: ${c.report_count ?? 0}</p>
+            <div class="mt-2 text-xs text-gray-500">${new Date(c.created).toLocaleString()}</div>
+            <div class="mt-3">
+              <button class="px-3 py-1 text-sm bg-blue-500 text-white rounded hover:bg-blue-600" onclick="openCompanyDetail(${c.id})">상세보기</button>
+            </div>
+          </div>
+        `).join('');
+      } catch (e) {
+        console.error(e);
+        const box = $('#mypage-companies-list');
+        if (box) box.innerHTML = `<div class="col-span-full text-red-500">내 업체 로드 실패: ${e.message}</div>`;
+      }
+    }
+
+    function openCompanyDetail(id) {
+      showCompanyDetail(id);
     }
 
     async function changePassword() {

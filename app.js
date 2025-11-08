@@ -4,10 +4,12 @@ const sqlite3 = require('sqlite3').verbose();
 const { Pool: PgPool } = require('pg');
 const fs = require('fs');
 const bodyParser = require('body-parser');
+const compression = require('compression');
 const cors = require('cors');
 const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 4200;
@@ -129,6 +131,35 @@ async function safeAlter(sql) {
   }
 }
 
+// 메일 전송기 생성 (환경변수 기반, 없으면 null)
+function createMailTransport() {
+  // 우선 SMTP_* 환경변수 기반 설정을 시도
+  const host = process.env.SMTP_HOST;
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+  const port = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT, 10) : undefined;
+  const secure = (process.env.SMTP_SECURE || '').toLowerCase();
+  const isSecure = secure === 'true' || secure === '1' || secure === 'yes';
+
+  if (host && user && pass) {
+    try {
+      const transporter = nodemailer.createTransport({
+        host,
+        port: port || (isSecure ? 465 : 587),
+        secure: isSecure,
+        auth: { user, pass },
+      });
+      return transporter;
+    } catch (e) {
+      console.warn('메일 전송기 생성 실패:', e && e.message);
+      return null;
+    }
+  }
+  return null;
+}
+
+const mailTransport = createMailTransport();
+
 // DB 초기화 (SQLite/PG 공용)
 (async function initDb() {
   try {
@@ -144,6 +175,8 @@ async function safeAlter(sql) {
       )`);
 
   await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'free'`);
+  // 숨김 플래그 컬럼 (게시글 노출 제어)
+  await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_hidden INTEGER DEFAULT 0`);
 
       await dbRun(`CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -201,6 +234,9 @@ async function safeAlter(sql) {
 
   await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS messenger TEXT`);
   await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS messenger_id TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS is_certified INTEGER DEFAULT 0`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS certified_by TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN IF NOT EXISTS certified_at TIMESTAMP`);
     } else {
       // SQLite 스키마
       await dbRun(`CREATE TABLE IF NOT EXISTS posts (
@@ -212,6 +248,8 @@ async function safeAlter(sql) {
         created DATETIME DEFAULT CURRENT_TIMESTAMP
       )`);
   await safeAlter(`ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'free'`);
+  // 숨김 플래그 (SQLite)
+  await safeAlter(`ALTER TABLE posts ADD COLUMN is_hidden INTEGER DEFAULT 0`);
 
       await dbRun(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -271,6 +309,9 @@ async function safeAlter(sql) {
 
   await safeAlter(`ALTER TABLE companies ADD COLUMN messenger TEXT`);
   await safeAlter(`ALTER TABLE companies ADD COLUMN messenger_id TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN is_certified INTEGER DEFAULT 0`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN certified_by TEXT`);
+  await safeAlter(`ALTER TABLE companies ADD COLUMN certified_at DATETIME`);
     }
 
     // 🔐 기본 관리자 계정 자동 생성 (처음 한 번만)
@@ -294,6 +335,8 @@ async function safeAlter(sql) {
 })();
 
 app.use(cors());
+// 응답 압축으로 전송량 절감
+app.use(compression());
 app.use(bodyParser.json({ limit: '1mb' }));
 app.use(session({
   name: 'community.sid',
@@ -307,7 +350,26 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7일
   }
 }));
-app.use(express.static(path.join(__dirname, 'public')));
+// 정적 파일 캐싱 (브라우저 캐시 활용)
+app.use(express.static(path.join(__dirname, 'public'), {
+  maxAge: '7d',
+  etag: true,
+  lastModified: true
+}));
+
+// 모든 POST 요청 로깅 (디버그: 숨김 처리 404 원인 파악)
+app.use((req, res, next) => {
+  if (req.method === 'POST') {
+    console.log('[DEBUG] POST incoming', req.originalUrl);
+  }
+  next();
+});
+
+// 간단 헬스체크 (업타임 모니터/워머용)
+app.get('/healthz', (req, res) => {
+  res.set('Cache-Control', 'no-store');
+  res.json({ ok: true, time: new Date().toISOString(), db: dbKind });
+});
 
 function sanitize(str, max = 5000) {
   const s = String(str || '')
@@ -602,12 +664,38 @@ app.post('/api/auth/request-reset', async (req, res) => {
     const resetUrl = `${protocol}://${host}/reset-password?token=${token}`;
 
     const response = { success: true, message: '비밀번호 재설정 안내를 확인해주세요.' };
-    if (process.env.NODE_ENV !== 'production') {
+    if (process.env.NODE_ENV !== 'production' || process.env.EMAIL_DEBUG === '1') {
       response.resetUrl = resetUrl;
       response.token = token;
     }
 
     console.info(`비밀번호 재설정 요청: user=${user.username}, email=${user.email}, resetUrl=${resetUrl}`);
+
+    // 메일 발송 (SMTP 환경변수 설정 시)
+    const fromName = process.env.MAIL_NAME || '커뮤니티 비밀번호 재설정';
+    const fromEmail = process.env.MAIL_FROM || `no-reply@${(host || '').split(':')[0] || 'localhost'}`;
+    if (mailTransport) {
+      try {
+        await mailTransport.sendMail({
+          from: `${fromName} <${fromEmail}>`,
+          to: user.email,
+          subject: '[커뮤니티] 비밀번호 재설정 안내',
+          text: `안녕하세요, ${user.username}님.\n\n아래 링크를 눌러 비밀번호를 재설정하세요. 이 링크는 1시간 동안만 유효합니다.\n\n${resetUrl}\n\n만약 본인이 요청한 것이 아니라면 이 메일을 무시하셔도 됩니다.`,
+          html: `<p>안녕하세요, <b>${escapeHtml(user.username)}</b>님.</p>
+<p>아래 버튼을 눌러 비밀번호를 재설정하세요. 이 링크는 <b>1시간</b> 동안만 유효합니다.</p>
+<p><a href="${resetUrl}" style="display:inline-block;padding:10px 16px;background:#2563eb;color:#fff;text-decoration:none;border-radius:6px">비밀번호 재설정</a></p>
+<p>링크가 눌리지 않으면 아래 주소를 복사해 브라우저에 붙여넣기 하세요:</p>
+<p><code>${escapeHtml(resetUrl)}</code></p>
+<hr/>
+<p>본인이 요청한 것이 아니라면 이 메일을 무시하세요.</p>`
+        });
+        console.info('✅ 재설정 메일 발송 완료:', user.email);
+      } catch (mailErr) {
+        console.warn('⚠️ 재설정 메일 발송 실패:', mailErr && mailErr.message);
+      }
+    } else {
+      console.info('메일 환경이 설정되지 않아 실제 메일은 전송되지 않았습니다. SMTP 환경변수를 설정하면 메일 전송됩니다.');
+    }
 
     res.json(response);
   } catch (err) {
@@ -629,10 +717,11 @@ app.post('/api/auth/reset-password', async (req, res) => {
     }
 
     const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const nowExpr = usePg ? 'NOW()' : "datetime('now')";
     const resetRow = await dbGet(
       `SELECT pr.id, pr.user_id
        FROM password_resets pr
-       WHERE pr.token_hash = ? AND pr.expires_at > datetime('now')
+       WHERE pr.token_hash = ? AND pr.expires_at > ${nowExpr}
        ORDER BY pr.id DESC
        LIMIT 1`,
       [tokenHash]
@@ -698,7 +787,7 @@ app.get('/sitemap.xml', async (req, res) => {
     const baseUrl = `${req.protocol}://${req.get('host')}`;
     const [companyRows, postRows] = await Promise.all([
       dbAll('SELECT id, created FROM companies ORDER BY created DESC LIMIT 5000'),
-      dbAll('SELECT id, created FROM posts ORDER BY created DESC LIMIT 5000')
+      dbAll('SELECT id, created FROM posts WHERE is_hidden = 0 ORDER BY created DESC LIMIT 5000')
     ]);
 
     const nowIso = new Date().toISOString();
@@ -769,8 +858,10 @@ app.get('/api/posts', async (req, res) => {
     const params = [];
 
     if (category && POST_CATEGORIES.includes(category)) {
-      query += ' WHERE p.category = ?';
+      query += ' WHERE p.category = ? AND p.is_hidden = 0';
       params.push(category);
+    } else {
+      query += ' WHERE p.is_hidden = 0';
     }
 
     query += ' ORDER BY p.id DESC LIMIT 200';
@@ -811,8 +902,8 @@ app.get('/api/posts/:id', async (req, res) => {
       return res.status(400).json({ success: false, error: '잘못된 게시글 ID' });
     }
 
-    const row = await dbGet('SELECT id, title, content, category, writer, created FROM posts WHERE id = ?', [id]);
-    if (!row) {
+    const row = await dbGet('SELECT id, title, content, category, writer, created, is_hidden FROM posts WHERE id = ?', [id]);
+    if (!row || row.is_hidden) {
       return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
     }
 
@@ -862,7 +953,7 @@ app.post('/api/posts/:id/comments', async (req, res) => {
 app.get('/api/companies', async (req, res) => {
   try {
     const { category, type, search } = req.query;
-    let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created FROM companies';
+  let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created, is_certified, certified_by, certified_at FROM companies';
     const params = [];
     const conditions = [];
 
@@ -886,6 +977,8 @@ app.get('/api/companies', async (req, res) => {
     query += ' ORDER BY created DESC LIMIT 100';
 
     const rows = await dbAll(query, params);
+    // 공개 목록은 단기 캐시 허용 (브라우저)
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({ success: true, companies: rows || [] });
   } catch (err) {
     console.error('업체 목록 조회 오류', err);
@@ -893,8 +986,8 @@ app.get('/api/companies', async (req, res) => {
   }
 });
 
-// 업체 등록
-app.post('/api/companies', async (req, res) => {
+// 업체 등록 (로그인 필요)
+app.post('/api/companies', requireAuth, async (req, res) => {
   try {
     const name = sanitize(req.body.name || '').slice(0, 100);
     const category = req.body.category; // 'payment' | 'credit' | 'scam' | 'other'
@@ -905,7 +998,7 @@ app.post('/api/companies', async (req, res) => {
     const messenger_id = sanitize(req.body.messenger_id || '').slice(0, 100);
     const description = sanitize(req.body.description || '', 1000);
     const rating = parseInt(req.body.rating) || 0;
-    const writer = sanitize(req.body.writer || '익명', 40) || '익명';
+    const writer = req.session.user.username; // 로그인된 사용자명으로 고정
 
     if (!name || !category || !type) {
       return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
@@ -936,6 +1029,7 @@ app.get('/api/companies/:id', async (req, res) => {
     if (!company) return res.status(404).json({ success: false, error: '업체를 찾을 수 없습니다' });
 
     const reviews = await dbAll('SELECT * FROM company_reviews WHERE company_id = ? ORDER BY created DESC', [companyId]);
+    res.set('Cache-Control', 'public, max-age=60');
     res.json({ success: true, company, reviews: reviews || [] });
   } catch (err) {
     console.error('업체 상세 조회 오류', err);
@@ -947,10 +1041,10 @@ app.get('/api/companies/:id', async (req, res) => {
 app.post('/api/companies/:id/reviews', async (req, res) => {
   try {
     const companyId = parseInt(req.params.id, 10);
-    const reviewType = req.body.review_type; // 'review' or 'report'
-    const rating = parseInt(req.body.rating) || null;
-    const content = sanitize(req.body.content || '', 1000);
-    const writer = sanitize(req.body.writer || '익명', 40) || '익명';
+  const reviewType = req.body.review_type; // 'review' or 'report'
+  const rating = parseInt(req.body.rating) || null;
+  const content = sanitize(req.body.content || '', 1000);
+  const writer = (req.session?.user?.username) || (sanitize(req.body.writer || '익명', 40) || '익명');
 
     if (!companyId || !reviewType || !content) {
       return res.json({ success: false, error: '필수 정보가 누락되었습니다' });
@@ -1062,6 +1156,7 @@ app.get('/companies/:id', async (req, res) => {
   </footer>
 </main>`;
 
+    res.set('Cache-Control', 'public, max-age=300');
     res.type('text/html; charset=utf-8').send(renderSeoDocument({
       title: `${company.name} - ${categoryLabel} ${typeLabel} 정보`,
       description: metaDescription,
@@ -1097,8 +1192,8 @@ app.get('/posts/:id', async (req, res) => {
   }
 
   try {
-    const post = await dbGet('SELECT id, title, content, category, writer, created FROM posts WHERE id = ?', [id]);
-    if (!post) {
+    const post = await dbGet('SELECT id, title, content, category, writer, created, is_hidden FROM posts WHERE id = ?', [id]);
+    if (!post || post.is_hidden) {
       const canonical = `${req.protocol}://${req.get('host')}/posts/${id}`;
       return res.status(404).send(renderSeoDocument({
         title: '게시글을 찾을 수 없습니다',
@@ -1185,6 +1280,15 @@ app.get('/reset-password', (req, res) => {
 // 미들웨어: 관리자 확인
 function requireAdmin(req, res, next) {
   if (!req.session.user || !req.session.user.is_admin) {
+    console.warn('[ADMIN] requireAdmin blocked', {
+      url: req.originalUrl,
+      method: req.method,
+      user: req.session && req.session.user ? {
+        id: req.session.user.id,
+        username: req.session.user.username,
+        is_admin: !!req.session.user.is_admin
+      } : null
+    });
     return res.status(403).json({ success: false, error: '관리자 권한이 필요합니다.' });
   }
   next();
@@ -1202,7 +1306,8 @@ app.get('/api/admin/posts', requireAdmin, async (req, res) => {
   try {
     const posts = await dbAll(`
       SELECT id, title, content, category, writer, created, 
-             (SELECT COUNT(*) FROM post_comments WHERE post_id = posts.id) as comment_count
+             (SELECT COUNT(*) FROM post_comments WHERE post_id = posts.id) as comment_count,
+             is_hidden
       FROM posts
       ORDER BY created DESC
       LIMIT 1000
@@ -1256,6 +1361,44 @@ app.put('/api/admin/posts/:id', requireAdmin, async (req, res) => {
     res.json({ success: true, message: '게시글이 수정되었습니다.' });
   } catch (e) {
     console.error('게시글 수정 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 게시글 숨김 (관리용)
+app.post('/api/admin/posts/:id/hide', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ success: false, error: '잘못된 게시글 ID입니다.' });
+    }
+    console.log('[ADMIN] hide post request', { id, user: req.session.user && req.session.user.username });
+    const post = await dbGet('SELECT id, is_hidden FROM posts WHERE id = ?', [id]);
+    if (!post) return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
+    if (post.is_hidden) return res.json({ success: true, message: '이미 숨김 처리된 글입니다.' });
+    await dbRun('UPDATE posts SET is_hidden = 1 WHERE id = ?', [id]);
+    res.json({ success: true, message: '게시글이 숨김 처리되었습니다.' });
+  } catch (e) {
+    console.error('게시글 숨김 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 게시글 숨김 해제 (관리용)
+app.post('/api/admin/posts/:id/unhide', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) {
+      return res.status(400).json({ success: false, error: '잘못된 게시글 ID입니다.' });
+    }
+    console.log('[ADMIN] unhide post request', { id, user: req.session.user && req.session.user.username });
+    const post = await dbGet('SELECT id, is_hidden FROM posts WHERE id = ?', [id]);
+    if (!post) return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
+    if (!post.is_hidden) return res.json({ success: true, message: '이미 공개 상태입니다.' });
+    await dbRun('UPDATE posts SET is_hidden = 0 WHERE id = ?', [id]);
+    res.json({ success: true, message: '게시글 숨김이 해제되었습니다.' });
+  } catch (e) {
+    console.error('게시글 숨김 해제 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1350,6 +1493,10 @@ app.delete('/api/admin/users/:id', requireAdmin, async (req, res) => {
   }
 });
 
+// -------- 미매칭 API 라우트 최종 처리기 (디버그용) --------
+// 위에서 처리되지 않은 /api 경로로 오는 모든 요청을 JSON 형태로 404 반환
+// (moved) API 404 fallback is registered at the very end after all API routes
+
 // 마이페이지: 내가 쓴 글 조회
 app.get('/api/mypage/posts', requireAuth, async (req, res) => {
   try {
@@ -1358,7 +1505,7 @@ app.get('/api/mypage/posts', requireAuth, async (req, res) => {
     }
     
     const posts = await dbAll(`
-      SELECT id, title, content, category as section, created, 
+      SELECT id, title, content, category as section, created, is_hidden,
              (SELECT COUNT(*) FROM post_comments WHERE post_id = posts.id) AS comment_count
       FROM posts
       WHERE writer = ?
@@ -1391,6 +1538,79 @@ app.get('/api/mypage/comments', requireAuth, async (req, res) => {
     res.json({ success: true, comments: comments || [] });
   } catch (e) {
     console.error('내 댓글 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 마이페이지: 내가 등록한 업체 조회
+app.get('/api/mypage/companies', requireAuth, async (req, res) => {
+  try {
+    if (!req.session.user) {
+      return res.status(401).json({ success: false, error: '로그인이 필요합니다.' });
+    }
+
+    const rows = await dbAll(`
+      SELECT id, name, category, type, rating, report_count, created
+      FROM companies
+      WHERE writer = ?
+      ORDER BY created DESC
+      LIMIT 200
+    `, [req.session.user.username]);
+
+    res.json({ success: true, companies: rows || [] });
+  } catch (e) {
+    console.error('내 업체 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 관리자: 업체 목록 조회
+app.get('/api/admin/companies', requireAdmin, async (req, res) => {
+  try {
+    const rows = await dbAll(`
+      SELECT id, name, category, type, rating, report_count, writer, created, is_certified, certified_by, certified_at
+      FROM companies
+      ORDER BY created DESC
+      LIMIT 1000
+    `);
+    res.json({ success: true, companies: rows || [] });
+  } catch (e) {
+    console.error('관리자 업체 목록 조회 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 관리자: 정상업체 인증 처리
+app.post('/api/admin/companies/:id/certify', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ success: false, error: '잘못된 업체 ID입니다.' });
+    const company = await dbGet('SELECT id, type FROM companies WHERE id = ?', [id]);
+    if (!company) return res.status(404).json({ success: false, error: '업체를 찾을 수 없습니다.' });
+    if (company.type !== 'safe') return res.status(400).json({ success: false, error: '정상업체만 인증할 수 있습니다.' });
+
+    const adminUser = req.session?.user?.username || 'admin';
+    const now = new Date().toISOString();
+    await dbRun('UPDATE companies SET is_certified = 1, certified_by = ?, certified_at = ? WHERE id = ?', [adminUser, now, id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('업체 인증 처리 오류', e);
+    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
+  }
+});
+
+// 관리자: 정상업체 인증 해제
+app.post('/api/admin/companies/:id/uncertify', requireAdmin, async (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (Number.isNaN(id)) return res.status(400).json({ success: false, error: '잘못된 업체 ID입니다.' });
+    const company = await dbGet('SELECT id FROM companies WHERE id = ?', [id]);
+    if (!company) return res.status(404).json({ success: false, error: '업체를 찾을 수 없습니다.' });
+
+    await dbRun('UPDATE companies SET is_certified = 0, certified_by = NULL, certified_at = NULL WHERE id = ?', [id]);
+    res.json({ success: true });
+  } catch (e) {
+    console.error('업체 인증 해제 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
   }
 });
@@ -1431,6 +1651,12 @@ app.post('/api/change-password', requireAuth, async (req, res) => {
     console.error('비밀번호 변경 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
   }
+});
+
+// -------- 최종 API 404 처리기 (모든 API 라우트 정의 이후) --------
+app.all(/^\/api\/.*$/, (req, res) => {
+  console.warn('[API 404 Fallback]', req.method, req.originalUrl);
+  res.status(404).json({ success: false, error: `Unknown API route: ${req.method} ${req.originalUrl}` });
 });
 
 app.get('/', (req, res) => {

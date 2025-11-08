@@ -53,6 +53,24 @@
 - **Frontend**: HTML5 + Tailwind CSS + Vanilla JavaScript
 - **기타**: CORS, Body-parser
 
+## ✉️ 비밀번호 재설정 이메일 전송 설정
+
+기본적으로 개발 환경에서는 비밀번호 재설정 링크가 응답(JSON)과 서버 로그에 포함됩니다. 실제 이메일 발송을 원하시면 SMTP 환경변수를 설정하세요.
+
+환경변수 (예시)
+- SMTP_HOST: SMTP 서버 호스트 (예: smtp.gmail.com, smtp.sendgrid.net)
+- SMTP_PORT: 포트 (TLS 587 또는 SSL 465)
+- SMTP_SECURE: true/false (465면 true 권장)
+- SMTP_USER: SMTP 사용자명 (Gmail/업체 계정 또는 SendGrid의 경우 "apikey")
+- SMTP_PASS: SMTP 비밀번호 (또는 SendGrid API Key)
+- MAIL_FROM: 발신 이메일 주소 (예: no-reply@yourdomain.com)
+- MAIL_NAME: 발신 표시 이름 (예: 커뮤니티 비밀번호 재설정)
+- EMAIL_DEBUG: "1"이면 프로덕션에서도 응답에 resetUrl 포함(테스트용)
+
+주의
+- 메일 환경이 설정되지 않으면 실제 메일은 전송되지 않습니다(응답 메시지는 동일).
+- 보안을 위해 프로덕션에서는 EMAIL_DEBUG를 사용하지 않는 것을 권장합니다.
+
 ## 📦 설치 및 실행
 
 ### 1. 의존성 설치
