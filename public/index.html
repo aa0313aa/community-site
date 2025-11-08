@@ -51,6 +51,8 @@
   <link rel="dns-prefetch" href="https://cdn.tailwindcss.com" />
   
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 간단 파비콘 -->
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ctext y='50' x='6' font-size='48'%3E%F0%9F%92%B3%3C/text%3E%3C/svg%3E" />
 </head>
 <body class="bg-gray-50 text-gray-900">
   <!-- 글로벌 초기 로딩 오버레이 -->
@@ -73,6 +75,12 @@
     .cert-banner .icon { font-size:18px; }
     .flash-highlight { position: relative; box-shadow: 0 0 0 2px rgba(59,130,246,.5) inset; background-image: linear-gradient(0deg, rgba(59,130,246,.08), rgba(59,130,246,.08)); animation: flashBg 1.2s ease-in-out 1; }
     @keyframes flashBg { 0%{ background-image: linear-gradient(0deg, rgba(59,130,246,.18), rgba(59,130,246,.18)); } 60%{ background-image: linear-gradient(0deg, rgba(59,130,246,.08), rgba(59,130,246,.08)); } 100%{ background-image: linear-gradient(0deg, rgba(59,130,246,0), rgba(59,130,246,0)); } }
+    .toast { display:flex; align-items:flex-start; gap:10px; padding:10px 12px; border-radius:10px; background:#fff; box-shadow:0 6px 16px rgba(0,0,0,.12); border-left:4px solid; }
+    .toast.info { border-color:#3b82f6; }
+    .toast.success { border-color:#10b981; }
+    .toast.error { border-color:#ef4444; }
+    .toast .title { font-weight:700; font-size:14px; }
+    .toast .msg { font-size:13px; color:#374151; }
   </style>
   <header class="bg-white border-b shadow-sm">
     <div class="max-w-6xl mx-auto px-4 py-4">
@@ -81,9 +89,9 @@
         </div>
         <div class="flex flex-wrap items-center gap-3">
           <nav class="space-x-2 text-sm">
-            <button onclick="showSection('companies')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">업체목록</button>
+            <button id="navCompaniesBtn" onclick="showSection('companies')" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">업체목록</button>
             <button id="addCompanyBtn" onclick="showSection('add-company')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 hidden">업체등록</button>
-            <button onclick="showSection('posts')" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">자유게시판</button>
+            <button id="navPostsBtn" onclick="showSection('posts')" class="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-700">자유게시판</button>
             <a href="/trending" class="inline-block px-4 py-2 border border-blue-300 text-blue-600 rounded hover:bg-blue-50">사기 정보 공유</a>
             <button id="mypageBtn" onclick="showSection('mypage')" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 hidden">마이페이지</button>
             <button id="adminMenuBtn" onclick="showSection('admin')" class="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700 hidden">관리자</button>
@@ -116,6 +124,8 @@
   </header>
 
   <main class="max-w-6xl mx-auto px-4 py-8">
+    <!-- 토스트 루트 -->
+    <div id="toast-root" class="fixed top-4 right-4 z-[2000] space-y-2"></div>
     <!-- 브라우저 자동채움 유도용 더미 필드 (오프스크린) -->
     <div aria-hidden="true" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;overflow:hidden">
       <input type="text" name="username" autocomplete="username">
@@ -952,6 +962,7 @@
       const targetSection = $(`#${section}-section`);
       if (targetSection) targetSection.classList.remove('hidden');
       currentSection = section;
+  updateNavActive(section);
 
       if (section === 'companies') {
         try { loadLatest(); } catch(_) {}
@@ -974,6 +985,25 @@
         setTimeout(() => el.classList.remove('flash-highlight'), 1200);
         // 스크롤 포커스
         el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (_) {}
+    }
+
+    // 네비게이션 활성화 표시
+    function updateNavActive(section) {
+      try {
+        const map = {
+          'companies': document.getElementById('navCompaniesBtn'),
+          'add-company': document.getElementById('addCompanyBtn'),
+          'posts': document.getElementById('navPostsBtn'),
+          'mypage': document.getElementById('mypageBtn'),
+          'admin': document.getElementById('adminMenuBtn')
+        };
+        Object.values(map).forEach(btn => {
+          if (!btn) return;
+          btn.classList.remove('ring-2','ring-blue-500','ring-offset-1');
+        });
+        const active = map[section];
+        if (active) active.classList.add('ring-2','ring-blue-500','ring-offset-1');
       } catch (_) {}
     }
 
@@ -2168,9 +2198,10 @@
 
   updateHeadSeoMeta();
       $('#year').textContent = new Date().getFullYear();
-      populatePostCategorySelectors();
-      updateAuthArea();
-      updatePostAuthorLabel();
+  populatePostCategorySelectors();
+  updateAuthArea();
+  updatePostAuthorLabel();
+  updateNavActive('companies');
 
       const postCategoryFilter = $('#postCategoryFilter');
       if (postCategoryFilter) {
@@ -2394,6 +2425,23 @@
       const perfEnd = performance.now();
       console.log('[Perf] 초기 로딩 완료(ms):', Math.round(perfEnd - perfStart));
     });
+
+    // 토스트 (알림)
+    function showToast(message, type = 'info', opts = {}) {
+      const root = document.getElementById('toast-root');
+      if (!root) {
+        window._nativeAlert ? window._nativeAlert(message) : alert(message);
+        return;
+      }
+      const el = document.createElement('div');
+      el.className = `toast ${type}`;
+      const titleText = type === 'success' ? '성공' : (type === 'error' ? '오류' : '알림');
+      el.innerHTML = `<div class=\"title\">${titleText}</div><div class=\"msg\">${escapeHtml(String(message || ''))}</div>`;
+      root.appendChild(el);
+      const duration = opts.duration || 3000;
+      setTimeout(() => { try { el.remove(); } catch(_){} }, duration);
+    }
+    try { window._nativeAlert = window._nativeAlert || window.alert; window.alert = (m)=> showToast(m,'info'); } catch(_){}
 
     // 마이페이지 함수들
     function switchMypageTab(tabName) {
