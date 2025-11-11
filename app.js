@@ -10,9 +10,10 @@ const session = require('express-session');
 const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
 
 const app = express();
-const PORT = process.env.PORT || 4200;
+const PORT = process.env.PORT || 5500;
 
 app.set('trust proxy', 1);
 
@@ -184,6 +185,8 @@ const mailTransport = createMailTransport();
   await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS category TEXT DEFAULT 'free'`);
   // 숨김 플래그 컬럼 (게시글 노출 제어)
   await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS is_hidden INTEGER DEFAULT 0`);
+  // 첨부파일 컬럼 (이미지/동영상 경로 JSON 배열)
+  await safeAlter(`ALTER TABLE posts ADD COLUMN IF NOT EXISTS attachments TEXT`);
 
       await dbRun(`CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -257,6 +260,8 @@ const mailTransport = createMailTransport();
   await safeAlter(`ALTER TABLE posts ADD COLUMN category TEXT DEFAULT 'free'`);
   // 숨김 플래그 (SQLite)
   await safeAlter(`ALTER TABLE posts ADD COLUMN is_hidden INTEGER DEFAULT 0`);
+  // 첨부파일 (SQLite)
+  await safeAlter(`ALTER TABLE posts ADD COLUMN attachments TEXT`);
 
       await dbRun(`CREATE TABLE IF NOT EXISTS users (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -344,7 +349,7 @@ const mailTransport = createMailTransport();
 app.use(cors());
 // 응답 압축으로 전송량 절감
 app.use(compression());
-app.use(bodyParser.json({ limit: '1mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
 app.use(session({
   name: 'community.sid',
   secret: process.env.SESSION_SECRET || 'community-secret-key',
@@ -357,6 +362,32 @@ app.use(session({
     maxAge: 1000 * 60 * 60 * 24 * 7 // 7일
   }
 }));
+
+// Multer 설정 (파일 업로드)
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, path.join(__dirname, 'public', 'uploads'));
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 50 * 1024 * 1024 }, // 50MB (동영상 지원)
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp|mp4|mov|avi|webm/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (mimetype && extname) {
+      return cb(null, true);
+    }
+    cb(new Error('이미지(jpg, png, gif, webp) 또는 동영상(mp4, mov, avi, webm)만 업로드 가능합니다.'));
+  }
+});
+
 // 정적 파일 캐싱 (브라우저 캐시 활용)
 app.use(express.static(path.join(__dirname, 'public'), {
   maxAge: '7d',
@@ -753,40 +784,57 @@ app.get('/robots.txt', (req, res) => {
   const baseUrl = `${req.protocol}://${req.get('host')}`;
   const content = [
     '# 🤖 커뮤니티 사이트 SEO 설정',
+    '',
+    '# 기본 설정 - 모든 크롤러 허용',
     'User-agent: *',
     'Allow: /',
-    '',
-    '# 느린 크롤러 제한',
-    'User-agent: *',
     'Crawl-delay: 1',
-    'Request-rate: 30/60',
     '',
-    '# Google 특화',
+    '# Google 특화 설정',
     'User-agent: Googlebot',
     'Allow: /',
     'Crawl-delay: 0',
     '',
-    '# Naver 특화',
+    '# Google 이미지봇',
+    'User-agent: Googlebot-Image',
+    'Allow: /',
+    '',
+    '# Google 모바일봇',
+    'User-agent: Googlebot-Mobile',
+    'Allow: /',
+    '',
+    '# Naver 크롤러',
     'User-agent: Yeti',
     'Allow: /',
+    'Crawl-delay: 1',
     '',
-    '# Daum 특화',
+    '# Daum 크롤러',
     'User-agent: Daumoa',
     'Allow: /',
+    'Crawl-delay: 1',
     '',
-    '# Bingbot',
+    '# Bing 크롤러',
     'User-agent: Bingbot',
     'Allow: /',
+    'Crawl-delay: 1',
     '',
     '# 악성 봇 차단',
     'User-agent: AhrefsBot',
     'Disallow: /',
+    '',
     'User-agent: SemrushBot',
+    'Disallow: /',
+    '',
+    'User-agent: MJ12bot',
     'Disallow: /',
     '',
     `Sitemap: ${baseUrl}/sitemap.xml`
   ].join('\n');
-  res.type('text/plain; charset=utf-8').send(content);
+  res.set({
+    'Content-Type': 'text/plain; charset=utf-8',
+    'Cache-Control': 'public, max-age=86400', // 24시간 캐시
+    'X-Robots-Tag': 'noindex' // robots.txt 자체는 인덱싱하지 않음
+  }).send(content);
 });
 
 app.get('/sitemap.xml', async (req, res) => {
@@ -887,6 +935,21 @@ app.get('/api/posts', async (req, res) => {
   }
 });
 
+// 파일 업로드 API (이미지 및 동영상)
+app.post('/api/upload', requireAuth, upload.array('files', 5), (req, res) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ success: false, error: '파일이 선택되지 않았습니다.' });
+    }
+
+    const filePaths = req.files.map(file => `/uploads/${file.filename}`);
+    res.json({ success: true, files: filePaths });
+  } catch (err) {
+    console.error('파일 업로드 오류', err);
+    res.status(500).json({ success: false, error: '파일 업로드 실패' });
+  }
+});
+
 app.post('/api/posts', async (req, res) => {
   try {
     if (!req.session.user) {
@@ -898,9 +961,10 @@ app.post('/api/posts', async (req, res) => {
     const categoryRaw = sanitize(req.body.category || 'free', 20).toLowerCase();
     const category = POST_CATEGORIES.includes(categoryRaw) ? categoryRaw : 'free';
     const writer = req.session.user.username;
+    const attachments = req.body.attachments ? JSON.stringify(req.body.attachments) : null;
     if (!content) return res.json({ success: false, error: '내용이 비어 있습니다' });
 
-    const r = await dbRun('INSERT INTO posts (title, content, category, writer) VALUES (?,?,?,?)', [title, content, category, writer]);
+    const r = await dbRun('INSERT INTO posts (title, content, category, writer, attachments) VALUES (?,?,?,?,?)', [title, content, category, writer, attachments]);
     res.json({ success: true, id: r.lastID });
   } catch (err) {
     console.error('게시글 등록 오류', err);
@@ -915,9 +979,20 @@ app.get('/api/posts/:id', async (req, res) => {
       return res.status(400).json({ success: false, error: '잘못된 게시글 ID' });
     }
 
-    const row = await dbGet('SELECT id, title, content, category, writer, created, is_hidden FROM posts WHERE id = ?', [id]);
+    const row = await dbGet('SELECT id, title, content, category, writer, created, is_hidden, attachments FROM posts WHERE id = ?', [id]);
     if (!row || row.is_hidden) {
       return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    // attachments를 JSON 파싱
+    if (row.attachments) {
+      try {
+        row.attachments = JSON.parse(row.attachments);
+      } catch (e) {
+        row.attachments = [];
+      }
+    } else {
+      row.attachments = [];
     }
 
     const comments = await dbAll('SELECT id, post_id, content, writer, created FROM post_comments WHERE post_id = ? ORDER BY id ASC', [id]);
@@ -1353,9 +1428,25 @@ app.delete('/api/admin/posts/:id', requireAdmin, async (req, res) => {
       return res.status(400).json({ success: false, error: '잘못된 게시글 ID입니다.' });
     }
     
-    const post = await dbGet('SELECT id FROM posts WHERE id = ?', [id]);
+    const post = await dbGet('SELECT id, attachments FROM posts WHERE id = ?', [id]);
     if (!post) {
       return res.status(404).json({ success: false, error: '게시글을 찾을 수 없습니다.' });
+    }
+
+    // 첨부파일 삭제
+    if (post.attachments) {
+      try {
+        const attachments = JSON.parse(post.attachments);
+        attachments.forEach(filePath => {
+          const fullPath = path.join(__dirname, 'public', filePath);
+          fs.unlink(fullPath, (err) => {
+            if (err) console.error('파일 삭제 오류:', filePath, err);
+            else console.log('파일 삭제 완료:', filePath);
+          });
+        });
+      } catch (e) {
+        console.error('첨부파일 삭제 중 오류', e);
+      }
     }
     
     // post_comments도 함께 삭제됨 (FOREIGN KEY CASCADE)
@@ -1718,6 +1809,14 @@ app.all(/^\/api\/.*$/, (req, res) => {
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
+});
+
+// www 없는 도메인으로 리다이렉트
+app.use((req, res, next) => {
+  if (req.headers.host.startsWith('www.')) {
+    return res.redirect(301, `${req.protocol}://${req.headers.host.replace('www.', '')}${req.url}`);
+  }
+  next();
 });
 
 app.listen(PORT, () => {

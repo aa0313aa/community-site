@@ -1,0 +1,46 @@
+# 🤖 커뮤니티 사이트 SEO 설정
+
+# 기본 설정 - 모든 크롤러 허용
+User-agent: *
+Allow: /
+Crawl-delay: 1
+
+# Google 특화 설정
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0
+
+# Google 이미지봇
+User-agent: Googlebot-Image
+Allow: /
+
+# Google 모바일봇
+User-agent: Googlebot-Mobile
+Allow: /
+
+# Naver 크롤러
+User-agent: Yeti
+Allow: /
+Crawl-delay: 1
+
+# Daum 크롤러
+User-agent: Daumoa
+Allow: /
+Crawl-delay: 1
+
+# Bing 크롤러
+User-agent: Bingbot
+Allow: /
+Crawl-delay: 1
+
+# 악성 봇 차단
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: MJ12bot
+Disallow: /
+
+Sitemap: https://휴대폰90프로.store/sitemap.xml
