@@ -1822,3 +1822,37 @@ app.use((req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Standalone community listening on http://localhost:${PORT}`);
 });
+
+// Keep-alive / DB ping: Render의 무료 플랜 등에서 유휴로 인해 인스턴스가 잠기는 것을
+// 완전히 막을 수는 없지만, 주기적으로 가벼운 쿼리를 실행하면 연결을 유지하거나
+// 플랫폼이 인스턴스를 깨울 가능성을 높일 수 있습니다.
+// - Postgres 사용 시 pg Pool에 간단한 SELECT 1 수행
+// - SQLite 사용 시 dbGet('SELECT 1') 수행
+// 인터벌은 3~5분 사이 권장 (여기서는 4분)
+const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000; // 4분
+try {
+  if (pgPool) {
+    setInterval(async () => {
+      try {
+        await pgPool.query('SELECT 1');
+        console.debug('[KEEPALIVE] pgPool ping ok');
+      } catch (err) {
+        console.warn('[KEEPALIVE] pgPool ping failed', err && err.message);
+      }
+    }, KEEP_ALIVE_INTERVAL_MS).unref && setTimeout(() => {}, 0);
+  } else if (typeof db !== 'undefined' && db) {
+    // sqlite3 Database wrapper: execute a no-op query
+    setInterval(async () => {
+      try {
+        db.get('SELECT 1', [], (err) => {
+          if (err) console.warn('[KEEPALIVE] sqlite ping failed', err && err.message);
+          else console.debug('[KEEPALIVE] sqlite ping ok');
+        });
+      } catch (err) {
+        console.warn('[KEEPALIVE] sqlite ping exception', err && err.message);
+      }
+    }, KEEP_ALIVE_INTERVAL_MS).unref && setTimeout(() => {}, 0);
+  }
+} catch (e) {
+  console.warn('[KEEPALIVE] setup failed', e && e.message);
+}
