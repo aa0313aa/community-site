@@ -1716,8 +1716,7 @@ app.get('/api/mypage/companies', requireAuth, async (req, res) => {
 app.get('/api/admin/companies', requireAdmin, async (req, res) => {
   try {
     const rows = await dbAll(`
-      SELECT id, name, category, type, website, phone, messenger, messenger_id, description,
-             rating, report_count, writer, created, is_certified, certified_by, certified_at
+      SELECT id, name, category, type, rating, report_count, writer, created, is_certified, certified_by, certified_at
       FROM companies
       ORDER BY created DESC
       LIMIT 1000
@@ -1760,55 +1759,6 @@ app.post('/api/admin/companies/:id/uncertify', requireAdmin, async (req, res) =>
     res.json({ success: true });
   } catch (e) {
     console.error('업체 인증 해제 오류', e);
-    res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
-  }
-});
-
-// 관리자: 업체 정보 수정
-app.put('/api/admin/companies/:id', requireAdmin, async (req, res) => {
-  try {
-    const id = parseInt(req.params.id, 10);
-    if (Number.isNaN(id)) {
-      return res.status(400).json({ success: false, error: '잘못된 업체 ID입니다.' });
-    }
-
-    const existing = await dbGet('SELECT id FROM companies WHERE id = ?', [id]);
-    if (!existing) {
-      return res.status(404).json({ success: false, error: '업체를 찾을 수 없습니다.' });
-    }
-
-    const name = sanitize(req.body.name || '').slice(0, 100);
-    const category = String(req.body.category || '').trim();
-    const type = String(req.body.type || '').trim();
-    const website = sanitize(req.body.website || '').slice(0, 200);
-    const phone = sanitize(req.body.phone || '').slice(0, 50);
-    const messenger = sanitize(req.body.messenger || '').slice(0, 50);
-    const messenger_id = sanitize(req.body.messenger_id || '').slice(0, 100);
-    const description = sanitize(req.body.description || '', 1000);
-    let rating = parseInt(req.body.rating, 10);
-
-    if (!name || !category || !type) {
-      return res.status(400).json({ success: false, error: '필수 정보를 모두 입력해주세요.' });
-    }
-    if (!['payment', 'credit', 'scam', 'other'].includes(category)) {
-      return res.status(400).json({ success: false, error: '잘못된 카테고리입니다.' });
-    }
-    if (!['safe', 'fraud', 'other'].includes(type)) {
-      return res.status(400).json({ success: false, error: '잘못된 분류입니다.' });
-    }
-    if (Number.isNaN(rating)) rating = 0;
-    rating = Math.max(0, Math.min(5, rating));
-
-    await dbRun(
-      `UPDATE companies
-       SET name = ?, category = ?, type = ?, website = ?, phone = ?, messenger = ?, messenger_id = ?, description = ?, rating = ?
-       WHERE id = ?`,
-      [name, category, type, website, phone, messenger, messenger_id, description, rating, id]
-    );
-
-    res.json({ success: true });
-  } catch (e) {
-    console.error('관리자 업체 수정 오류', e);
     res.status(500).json({ success: false, error: '서버 오류가 발생했습니다.' });
   }
 });

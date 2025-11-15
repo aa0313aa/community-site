@@ -81,9 +81,6 @@
     .toast.error { border-color:#ef4444; }
     .toast .title { font-weight:700; font-size:14px; }
     .toast .msg { font-size:13px; color:#374151; }
-    .lotto-ball { width:44px; height:44px; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:18px; box-shadow:inset 0 -2px 0 rgba(0,0,0,.15); }
-    .lotto-card { background:#fff; border-radius:18px; box-shadow:0 12px 36px rgba(15,23,42,.15); border:1px solid rgba(15,23,42,.08); }
-    .lotto-divider { height:1px; background:linear-gradient(90deg,rgba(226,232,240,0),rgba(148,163,184,.7),rgba(226,232,240,0)); }
   </style>
   <header class="bg-white border-b shadow-sm">
     <div class="max-w-6xl mx-auto px-4 py-4">
@@ -222,13 +219,7 @@
     <!-- 자유게시판 섹션 -->
     <section id="posts-section" class="mb-8 hidden">
       <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-        <div class="flex gap-2 items-center">
-          <h2 class="text-xl font-semibold">자유게시판</h2>
-          <button onclick="openLottoModal()" class="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 flex items-center gap-1">
-            <span>🎯</span>
-            <span>로또확인</span>
-          </button>
-        </div>
+        <h2 class="text-xl font-semibold">자유게시판</h2>
         <div class="flex gap-2 items-center">
           <select id="postCategoryFilter" class="border rounded px-3 py-2 text-sm">
             <option value="">전체 카테고리</option>
@@ -310,23 +301,21 @@
     </section>
 
     <!-- 관리자 섹션 -->
-    <section id="posts-section" class="mb-8 hidden">
-      <div class="flex flex-wrap gap-3 items-center justify-between mb-4">
-        <div class="flex gap-2 items-center">
-          <h2 class="text-xl font-semibold">자유게시판</h2>
-          <button onclick="showSection('lotto')" class="px-4 py-2 bg-amber-500 text-white rounded hover:bg-amber-600 flex items-center gap-1">
-            <span>🎯</span>
-            <span>로또확인</span>
-          </button>
+    <section id="admin-section" class="mb-8 hidden">
+      <div class="mb-6">
+        <h2 class="text-2xl font-bold text-red-600 mb-4">🛡️ 관리자 대시보드</h2>
+        
+        <!-- 탭 -->
+        <div class="flex gap-2 mb-4 border-b">
+          <button onclick="switchAdminTab('posts')" class="admin-tab-btn px-4 py-2 border-b-2 border-red-600 text-red-600 font-semibold" data-tab="posts">게시글 관리</button>
+          <button onclick="switchAdminTab('companies')" class="admin-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="companies">업체 관리</button>
+          <button onclick="switchAdminTab('users')" class="admin-tab-btn px-4 py-2 border-b-2 border-transparent text-gray-600 hover:text-gray-800" data-tab="users">회원 관리</button>
         </div>
-        <div class="flex gap-2 items-center">
-          <select id="postCategoryFilter" class="border rounded px-3 py-2 text-sm">
-            <option value="">전체 카테고리</option>
-            <option value="free">자유게시판</option>
-          </select>
-          <button onclick="toggleWrite()" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">글쓰기</button>
-        </div>
-      </div>
+
+        <!-- 게시글 관리 탭 -->
+        <div id="admin-posts-tab" class="admin-tab hidden">
+          <div class="bg-white rounded-lg p-6 shadow overflow-x-auto">
+            <table class="w-full text-sm">
               <thead class="bg-gray-100 border-b">
                 <tr>
                   <th class="text-left px-4 py-2">ID</th>
@@ -479,154 +468,6 @@
                 <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
               </div>
             </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 업체 편집 모달 -->
-    <div id="editCompanyModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50" onclick="closeEditCompanyModal()">
-      <div class="flex items-center justify-center p-4 min-h-screen">
-        <div class="bg-white rounded-lg max-w-3xl w-full shadow-lg" onclick="event.stopPropagation()">
-          <div class="flex items-center justify-between border-b px-6 py-4">
-            <h3 class="text-lg font-semibold">업체 정보 편집</h3>
-            <button onclick="closeEditCompanyModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
-          </div>
-          <div class="px-6 py-5">
-            <form id="editCompanyForm" class="space-y-4">
-              <input type="hidden" id="editCompanyId" />
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">업체명 *</label>
-                  <input type="text" id="editCompanyName" class="w-full border rounded px-3 py-2" required />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">작성자</label>
-                  <input type="text" id="editCompanyWriter" class="w-full border rounded px-3 py-2 bg-gray-100" disabled />
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">카테고리 *</label>
-                  <select id="editCompanyCategory" class="w-full border rounded px-3 py-2" required>
-                    <option value="credit">신용카드</option>
-                    <option value="payment">소액결제</option>
-                    <option value="scam">사기사이트</option>
-                    <option value="other">기타</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">분류 *</label>
-                  <select id="editCompanyType" class="w-full border rounded px-3 py-2" required>
-                    <option value="safe">정상업체</option>
-                    <option value="fraud">사기업체</option>
-                    <option value="other">기타</option>
-                  </select>
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">웹사이트</label>
-                  <input type="url" id="editCompanyWebsite" class="w-full border rounded px-3 py-2" />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">전화번호</label>
-                  <input type="text" id="editCompanyPhone" class="w-full border rounded px-3 py-2" />
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">메신저</label>
-                  <input type="text" id="editCompanyMessenger" class="w-full border rounded px-3 py-2" />
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">메신저 ID</label>
-                  <input type="text" id="editCompanyMessengerId" class="w-full border rounded px-3 py-2" />
-                </div>
-              </div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label class="block text-sm font-medium mb-1">평점</label>
-                  <select id="editCompanyRating" class="w-full border rounded px-3 py-2">
-                    <option value="0">평점 없음</option>
-                    <option value="1">⭐ 1점</option>
-                    <option value="2">⭐⭐ 2점</option>
-                    <option value="3">⭐⭐⭐ 3점</option>
-                    <option value="4">⭐⭐⭐⭐ 4점</option>
-                    <option value="5">⭐⭐⭐⭐⭐ 5점</option>
-                  </select>
-                </div>
-                <div>
-                  <label class="block text-sm font-medium mb-1">신고 횟수</label>
-                  <input type="text" id="editCompanyReports" class="w-full border rounded px-3 py-2 bg-gray-100" disabled />
-                </div>
-              </div>
-              <div>
-                <label class="block text-sm font-medium mb-1">설명</label>
-                <textarea id="editCompanyDescription" rows="4" class="w-full border rounded px-3 py-2"></textarea>
-              </div>
-              <div class="flex gap-2 justify-end">
-                <button type="button" onclick="closeEditCompanyModal()" class="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300">취소</button>
-                <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">저장</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- 로또 번호 모달 -->
-    <div id="lottoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-[1200]" onclick="closeLottoModal()">
-      <div class="flex items-center justify-center p-4 min-h-screen">
-        <div class="lotto-card w-full max-w-3xl bg-white" onclick="event.stopPropagation()">
-          <div class="flex flex-wrap items-center justify-between border-b px-6 py-4 gap-3">
-            <div>
-              <p class="text-xs uppercase tracking-wide text-emerald-600 font-semibold">동행복권 실시간 연동</p>
-              <h3 id="lottoRoundLabel" class="text-2xl font-bold text-slate-900 mt-1">로딩 중...</h3>
-              <p id="lottoRoundDate" class="text-sm text-slate-500"></p>
-            </div>
-            <div class="flex gap-2 items-center">
-              <button onclick="refreshLatestLottoRound()" class="px-3 py-1.5 text-sm border border-slate-200 rounded hover:bg-slate-50">최신회차</button>
-              <button onclick="closeLottoModal()" class="text-2xl text-gray-500 hover:text-gray-700">&times;</button>
-            </div>
-          </div>
-          <div class="px-6 py-5 space-y-6">
-            <div class="flex flex-wrap items-center gap-3 text-sm">
-              <button id="lottoPrevBtn" onclick="moveLottoRound(-1)" class="px-3 py-1.5 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-40" disabled>← 이전 회차</button>
-              <button id="lottoNextBtn" onclick="moveLottoRound(1)" class="px-3 py-1.5 bg-slate-100 rounded hover:bg-slate-200 disabled:opacity-40" disabled>다음 회차 →</button>
-              <div class="flex items-center gap-2 text-sm">
-                <span>회차 이동</span>
-                <input id="lottoRoundInput" type="number" min="1" class="w-24 border rounded px-2 py-1" placeholder="예: 1198" />
-                <button onclick="jumpToLottoRound()" class="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700">확인</button>
-              </div>
-            </div>
-            <div id="lottoStatus" class="text-sm text-slate-500"></div>
-            <div class="space-y-4">
-              <div class="flex flex-wrap items-center gap-3" id="lottoNumbers"></div>
-              <div class="flex items-center gap-2 text-sm text-slate-500">
-                <span>보너스</span>
-                <span id="lottoBonus" class="lotto-ball bg-slate-600"></span>
-              </div>
-            </div>
-            <div class="space-y-3">
-              <div class="text-lg font-semibold text-slate-800" id="lottoPrize"></div>
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm text-slate-600">
-                <div>
-                  <p class="font-semibold text-slate-700">추첨 방송</p>
-                  <p>매주 토요일 오후 8시 35분 (MBC 생방송)</p>
-                  <p class="mt-2 font-semibold text-slate-700">판매 시간</p>
-                  <p>매일 6시부터 24시까지, 추첨일 오후 8시 판매 마감</p>
-                </div>
-                <div>
-                  <p class="font-semibold text-slate-700">지급기한</p>
-                  <p>당첨일 기준 지급 개시일로부터 1년</p>
-                  <p class="mt-2 font-semibold text-slate-700">관련 링크</p>
-                  <p><a href="https://www.dhlottery.co.kr/gameResult.do?method=byWin" target="_blank" rel="noopener" class="text-blue-600 hover:underline">동행복권 확인하기</a></p>
-                </div>
-              </div>
-            </div>
-            <div class="lotto-divider"></div>
-            <p class="text-xs text-slate-400">※ 본 정보는 동행복권 API를 통해 제공되며, 실제 당첨 정보와 차이가 있을 수 있습니다. 정확한 내용은 동행복권 사이트에서 확인해주세요.</p>
           </div>
         </div>
       </div>
@@ -806,14 +647,6 @@
 
     let currentSection = 'companies';
     let currentUser = null;
-    const adminCompaniesStore = new Map();
-    const lottoState = {
-      cache: new Map(),
-      currentRound: null,
-      latestRound: null,
-      isLoading: false
-    };
-    const LOTTO_API_BASE = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
     let authModalMode = 'login';
 
     function updateHeadSeoMeta() {
@@ -2435,30 +2268,25 @@
         const tbody = $('#admin-companies-list');
         if (!tbody) return;
         tbody.innerHTML = '';
-        adminCompaniesStore.clear();
-
         json.companies.forEach(c => {
-          adminCompaniesStore.set(c.id, c);
-          const typeLabel = c.type === 'fraud' ? '사기업체' : (c.type === 'safe' ? '정상업체' : '기타');
           const tr = document.createElement('tr');
           tr.className = 'hover:bg-gray-50';
           tr.innerHTML = `
             <td class="px-4 py-2">${c.id}</td>
             <td class="px-4 py-2"><a href="javascript:showCompanyDetail(${c.id})" class="text-blue-600 hover:underline">${escapeHtml(c.name)}</a></td>
-            <td class="px-4 py-2">${typeLabel}</td>
+            <td class="px-4 py-2">${c.type === 'fraud' ? '사기업체' : '정상업체'}</td>
             <td class="px-4 py-2">${escapeHtml(c.category)}</td>
             <td class="px-4 py-2">${c.rating ?? 0}</td>
             <td class="px-4 py-2">${c.report_count ?? 0}</td>
             <td class="px-4 py-2">${escapeHtml(c.writer || '익명')}</td>
             <td class="px-4 py-2 text-xs text-gray-500">${new Date(c.created).toLocaleString()}</td>
             <td class="px-4 py-2">${c.type === 'safe' ? (c.is_certified ? '<span class="text-green-700 bg-green-100 text-xs px-2 py-1 rounded">인증됨</span>' : '<span class="text-gray-600 bg-gray-100 text-xs px-2 py-1 rounded">미인증</span>') : '-'}</td>
-            <td class="px-4 py-2 flex flex-wrap gap-2">
-              ${c.type === 'safe'
-                ? (c.is_certified
-                    ? `<button class="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600" onclick="uncertifyCompany(${c.id})">해제</button>`
-                    : `<button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700" onclick="certifyCompany(${c.id})">인증</button>`)
-                : ''}
-              <button class="px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700" onclick="openEditCompanyModal(${c.id})">편집</button>
+            <td class="px-4 py-2">
+              ${c.type === 'safe' ? (
+                c.is_certified
+                  ? `<button class="px-2 py-1 text-xs bg-yellow-500 text-white rounded hover:bg-yellow-600" onclick="uncertifyCompany(${c.id})">해제</button>`
+                  : `<button class="px-2 py-1 text-xs bg-green-600 text-white rounded hover:bg-green-700" onclick="certifyCompany(${c.id})">인증</button>`
+              ) : ''}
             </td>
           `;
           tbody.appendChild(tr);
@@ -2494,276 +2322,6 @@
         alert('인증 해제 실패: ' + e.message);
       }
     }
-
-    function setLottoStatus(message = '', isError = false) {
-      const box = $('#lottoStatus');
-      if (!box) return;
-      box.textContent = message || '';
-      box.classList.remove('text-red-500', 'text-slate-500');
-      box.classList.add(isError ? 'text-red-500' : 'text-slate-500');
-    }
-
-    function getLottoBallColor(num) {
-      if (num <= 10) return 'bg-yellow-400 text-gray-900';
-      if (num <= 20) return 'bg-blue-500';
-      if (num <= 30) return 'bg-red-500';
-      if (num <= 40) return 'bg-gray-700';
-      return 'bg-green-500';
-    }
-
-    function renderLottoView(data) {
-      if (!data) return;
-      lottoState.currentRound = data.round;
-      if (!lottoState.latestRound || data.round > lottoState.latestRound) {
-        lottoState.latestRound = data.round;
-      }
-
-      $('#lottoRoundLabel').textContent = `${data.round}회차`;
-      $('#lottoRoundDate').textContent = data.drawDate ? `${data.drawDate} 추첨` : '';
-      $('#lottoRoundInput').value = data.round;
-
-      const numsEl = $('#lottoNumbers');
-      if (numsEl) {
-        numsEl.innerHTML = data.numbers.map(num => `<span class="lotto-ball ${getLottoBallColor(num)}">${num}</span>`).join('');
-      }
-      const bonusEl = $('#lottoBonus');
-      if (bonusEl) {
-        bonusEl.textContent = data.bonus;
-        bonusEl.className = `lotto-ball ${getLottoBallColor(data.bonus)}`;
-      }
-
-      const formatWon = (val) => {
-        const n = Number(val || 0);
-        if (!Number.isFinite(n)) return '-';
-        return n.toLocaleString('ko-KR');
-      };
-
-      const prizeEl = $('#lottoPrize');
-      if (prizeEl) {
-        prizeEl.innerHTML = `1등 당첨금 <span class="text-blue-600 font-bold">${formatWon(data.firstPrize)}원</span> · 당첨 복권 수 ${data.firstWinners || 0}개 · 총 판매금액 ${formatWon(data.salesAmount)}원`;
-      }
-
-      updateLottoNavButtons();
-      setLottoStatus('');
-    }
-
-    function updateLottoNavButtons() {
-      const prevBtn = $('#lottoPrevBtn');
-      const nextBtn = $('#lottoNextBtn');
-      if (prevBtn) {
-        prevBtn.disabled = lottoState.isLoading || !lottoState.currentRound || lottoState.currentRound <= 1;
-      }
-      if (nextBtn) {
-        nextBtn.disabled = lottoState.isLoading || !lottoState.currentRound || (lottoState.latestRound && lottoState.currentRound >= lottoState.latestRound);
-      }
-    }
-
-    async function fetchLottoRound(round) {
-      if (!round || round < 1) return null;
-      try {
-        const res = await fetch(`${LOTTO_API_BASE}&drwNo=${round}`, { cache: 'no-store' });
-        if (!res.ok) {
-          console.warn('동행복권 API 오류', res.status);
-          return null;
-        }
-        const json = await res.json();
-        if (json.returnValue !== 'success') return null;
-        return {
-          round: json.drwNo,
-          drawDate: json.drwNoDate,
-          numbers: [json.drwtNo1, json.drwtNo2, json.drwtNo3, json.drwtNo4, json.drwtNo5, json.drwtNo6],
-          bonus: json.bnusNo,
-          firstPrize: Number(json.firstWinamnt || 0),
-          firstWinners: json.firstPrzwnerCo || 0,
-          salesAmount: Number(json.totSellamnt || 0)
-        };
-      } catch (err) {
-        console.error('동행복권 API 호출 실패', err);
-        return null;
-      }
-    }
-
-    async function findLatestLottoRound() {
-      let guess = lottoState.latestRound || 1200;
-      let data = await fetchLottoRound(guess);
-      let attempts = 0;
-      while (!data && guess > 1 && attempts < 200) {
-        guess -= 1;
-        attempts += 1;
-        data = await fetchLottoRound(guess);
-      }
-      if (!data) throw new Error('최신 회차를 찾지 못했습니다. 잠시 후 다시 시도해주세요.');
-
-      let nextRound = guess + 1;
-      attempts = 0;
-      while (attempts < 200) {
-        const nextData = await fetchLottoRound(nextRound);
-        if (!nextData) break;
-        data = nextData;
-        nextRound += 1;
-        attempts += 1;
-      }
-      return data;
-    }
-
-    async function loadLottoRound(round) {
-      if (lottoState.isLoading) return;
-      if (!round || round < 1) {
-        setLottoStatus('유효한 회차 번호를 입력해주세요.', true);
-        return;
-      }
-      lottoState.isLoading = true;
-      updateLottoNavButtons();
-      setLottoStatus('로또 정보를 불러오는 중입니다...');
-      try {
-        let data = lottoState.cache.get(round);
-        if (!data) {
-          data = await fetchLottoRound(round);
-          if (!data) throw new Error('해당 회차 정보를 찾을 수 없습니다.');
-          lottoState.cache.set(round, data);
-        }
-        renderLottoView(data);
-      } catch (err) {
-        console.error(err);
-        setLottoStatus(err.message || '로또 정보를 불러오지 못했습니다.', true);
-      } finally {
-        lottoState.isLoading = false;
-        updateLottoNavButtons();
-      }
-    }
-
-    async function refreshLatestLottoRound() {
-      if (lottoState.isLoading) return;
-      lottoState.isLoading = true;
-      setLottoStatus('최신 회차를 확인하는 중입니다...');
-      updateLottoNavButtons();
-      try {
-        const latestData = await findLatestLottoRound();
-        lottoState.cache.set(latestData.round, latestData);
-        lottoState.latestRound = latestData.round;
-        renderLottoView(latestData);
-      } catch (err) {
-        console.error(err);
-        setLottoStatus(err.message || '최신 회차 확인 실패', true);
-      } finally {
-        lottoState.isLoading = false;
-        updateLottoNavButtons();
-      }
-    }
-
-    async function openLottoModal(round) {
-      const modal = $('#lottoModal');
-      if (!modal) return;
-      modal.classList.remove('hidden');
-      if (round) {
-        await loadLottoRound(round);
-        return;
-      }
-      if (lottoState.currentRound) {
-        const cached = lottoState.cache.get(lottoState.currentRound);
-        if (cached) renderLottoView(cached);
-        return;
-      }
-      await refreshLatestLottoRound();
-    }
-
-    function closeLottoModal() {
-      const modal = $('#lottoModal');
-      if (modal) modal.classList.add('hidden');
-    }
-
-    async function moveLottoRound(delta) {
-      if (!delta || !lottoState.currentRound) return;
-      const target = lottoState.currentRound + delta;
-      if (target < 1) return;
-      if (delta > 0 && lottoState.latestRound && target > lottoState.latestRound) {
-        return;
-      }
-      await loadLottoRound(target);
-    }
-
-    async function jumpToLottoRound() {
-      const input = $('#lottoRoundInput');
-      if (!input) return;
-      const round = parseInt(input.value, 10);
-      if (!round || round < 1) {
-        setLottoStatus('회차 번호를 정확히 입력해주세요.', true);
-        return;
-      }
-      await loadLottoRound(round);
-    }
-
-    function openEditCompanyModal(id) {
-      const modal = $('#editCompanyModal');
-      if (!modal) return;
-      const company = adminCompaniesStore.get(id);
-      if (!company) {
-        alert('업체 정보를 찾을 수 없습니다. 목록을 새로고침해주세요.');
-        return;
-      }
-
-      $('#editCompanyId').value = company.id;
-      $('#editCompanyName').value = company.name || '';
-      $('#editCompanyWriter').value = company.writer || '익명';
-      $('#editCompanyCategory').value = company.category || 'other';
-      $('#editCompanyType').value = company.type || 'other';
-      $('#editCompanyWebsite').value = company.website || '';
-      $('#editCompanyPhone').value = company.phone || '';
-      $('#editCompanyMessenger').value = company.messenger || '';
-      $('#editCompanyMessengerId').value = company.messenger_id || '';
-      $('#editCompanyRating').value = (company.rating ?? 0).toString();
-      $('#editCompanyReports').value = company.report_count ?? 0;
-      $('#editCompanyDescription').value = company.description || '';
-
-      modal.classList.remove('hidden');
-    }
-
-    function closeEditCompanyModal() {
-      const modal = $('#editCompanyModal');
-      if (modal) {
-        modal.classList.add('hidden');
-        $('#editCompanyForm')?.reset();
-        $('#editCompanyId').value = '';
-      }
-    }
-
-    $('#editCompanyForm')?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const id = parseInt($('#editCompanyId').value, 10);
-      if (!id) {
-        alert('잘못된 업체 ID입니다.');
-        return;
-      }
-
-      const payload = {
-        name: $('#editCompanyName').value.trim(),
-        category: $('#editCompanyCategory').value,
-        type: $('#editCompanyType').value,
-        website: $('#editCompanyWebsite').value.trim(),
-        phone: $('#editCompanyPhone').value.trim(),
-        messenger: $('#editCompanyMessenger').value.trim(),
-        messenger_id: $('#editCompanyMessengerId').value.trim(),
-        description: $('#editCompanyDescription').value.trim(),
-        rating: parseInt($('#editCompanyRating').value, 10) || 0
-      };
-
-      try {
-        const res = await fetch(`/api/admin/companies/${id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'same-origin',
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (!json.success) throw new Error(json.error || '수정 실패');
-        alert('업체 정보가 수정되었습니다.');
-        closeEditCompanyModal();
-        await loadAdminCompanies();
-      } catch (err) {
-        console.error(err);
-        alert('업체 수정 실패: ' + err.message);
-      }
-    });
 
     // 게시글 편집 모달 열기
     function openEditPostModal(id, title, content) {
@@ -2962,15 +2520,6 @@
     $('#searchInput').addEventListener('keypress', (e) => {
       if (e.key === 'Enter') searchCompanies();
     });
-    const lottoRoundInput = $('#lottoRoundInput');
-    if (lottoRoundInput) {
-      lottoRoundInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          jumpToLottoRound();
-        }
-      });
-    }
 
     document.addEventListener('DOMContentLoaded', async () => {
       const perfStart = performance.now();
