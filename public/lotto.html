@@ -218,11 +218,7 @@
       $('#lottoNextBtn').addEventListener('click', () => moveLottoRound(1));
       $('#lottoJumpBtn').addEventListener('click', jumpToLottoRound);
       const roundInput = $('#lottoRoundInput'); if (roundInput) roundInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { e.preventDefault(); jumpToLottoRound(); } });
-
-      // 자동으로 최신 회차를 즉시 탐색하지 않도록 변경합니다.
-      // 외부 API 호출이 느리거나 차단된 환경에서 페이지가 '로딩 중' 상태로 오래 머무르는 문제를 완화하기 위함입니다.
-      setLottoStatus('최신 회차를 불러오려면 우측 상단의 "최신회차" 버튼을 눌러주세요.');
-      updateLottoNavButtons();
+      refreshLatestLottoRound();
     });
   </script>
 </body>
