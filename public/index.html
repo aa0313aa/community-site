@@ -2585,98 +2585,25 @@
     }
 
     async function findLatestLottoRound() {
-      // 견고한 최신 회차 탐색
-      // 전략: 시작점을 기준으로 성공하면 지수적으로 상한(upper bound) 확장 후 이진 탐색,
-      // 시작점에서 실패하면 감소한 뒤(과거 회차 탐색) 성공을 찾으면 동일 방식으로 상방 탐색.
-      const MAX_API_CALLS = 200;
-      let calls = 0;
-
-      const tryFetch = async (n) => {
-        if (!n || n < 1) return null;
-        if (calls >= MAX_API_CALLS) return null;
-        calls += 1;
-        return await fetchLottoRound(n);
-      };
-
-      let start = lottoState.latestRound || 1200;
-      let data = await tryFetch(start);
-
-      // If start fails, step downwards up to limit to find a recent existing round
-      if (!data) {
-        let guess = start - 1;
-        while (guess > 0 && calls < MAX_API_CALLS) {
-          const d = await tryFetch(guess);
-          if (d) { data = d; start = guess; break; }
-          guess -= 1;
-        }
+      let guess = lottoState.latestRound || 1200;
+      let data = await fetchLottoRound(guess);
+      let attempts = 0;
+      while (!data && guess > 1 && attempts < 200) {
+        guess -= 1;
+        attempts += 1;
+        data = await fetchLottoRound(guess);
       }
-
-      if (!data) {
-        // Fallback: try upward search from a reasonable lower bound (1)
-        let low = 1;
-        let high = 1024; // initial high guess
-        // expand high until failure or call limit
-        while (calls < MAX_API_CALLS) {
-          const d = await tryFetch(high);
-          if (d) {
-            data = d;
-            low = high;
-            high = high * 2;
-            if (high > 5000) break;
-            continue;
-          }
-          break;
-        }
-        if (!data) throw new Error('최신 회차를 찾지 못했습니다. 잠시 후 다시 시도해주세요.');
-        // now binary search between low..high to find last success
-        let lo = Math.max(1, Math.floor(low/2));
-        let hi = high;
-        while (lo <= hi && calls < MAX_API_CALLS) {
-          const mid = Math.floor((lo + hi) / 2);
-          const d = await tryFetch(mid);
-          if (d) {
-            data = d;
-            lo = mid + 1;
-          } else {
-            hi = mid - 1;
-          }
-        }
-        return data;
-      }
-
-      // If we have a valid data at 'start', try to expand upward exponentially
-      let lo = data.round;
-      let step = 1;
-      let hi = lo;
-      while (calls < MAX_API_CALLS) {
-        const candidate = lo + step;
-        const d = await tryFetch(candidate);
-        if (d) {
-          hi = candidate;
-          data = d;
-          step *= 2;
-          // safety cap
-          if (candidate > 5000) break;
-          continue;
-        }
-        break;
-      }
-
-      // binary search between lo..hi to find the last successful round
-      let left = lo;
-      let right = hi;
-      while (left <= right && calls < MAX_API_CALLS) {
-        const mid = Math.floor((left + right) / 2);
-        const d = await tryFetch(mid);
-        if (d) {
-          data = d;
-          left = mid + 1;
-        } else {
-          right = mid - 1;
-        }
-      }
-
       if (!data) throw new Error('최신 회차를 찾지 못했습니다. 잠시 후 다시 시도해주세요.');
+
+      let nextRound = guess + 1;
+      attempts = 0;
+      while (attempts < 200) {
+        const nextData = await fetchLottoRound(nextRound);
+        if (!nextData) break;
+        data = nextData;
+        nextRound += 1;
+        attempts += 1;
+      }
       return data;
     }
 
