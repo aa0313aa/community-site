@@ -73,7 +73,7 @@
   <script>
     const $ = s => document.querySelector(s);
     const lottoState = { cache: new Map(), currentRound: null, latestRound: null, isLoading: false };
-    const LOTTO_API_BASE = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
+    const LOTTO_API_BASE = '/api/lotto';
 
     function setLottoStatus(message = '', isError = false, allowHtml = false) {
       const box = $('#lottoStatus');
@@ -136,7 +136,7 @@
     async function fetchLottoRound(round) {
       if (!round || round < 1) return null;
       try {
-        const res = await fetch(`${LOTTO_API_BASE}&drwNo=${round}`, { cache: 'no-store' });
+        const res = await fetch(`${LOTTO_API_BASE}?drwNo=${round}`, { cache: 'no-store' });
         if (!res.ok) return null;
         const json = await res.json();
         if (json.returnValue !== 'success') return null;

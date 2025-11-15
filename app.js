@@ -3,6 +3,7 @@ const path = require('path');
 const sqlite3 = require('sqlite3').verbose();
 const { Pool: PgPool } = require('pg');
 const fs = require('fs');
+const https = require('https');
 const bodyParser = require('body-parser');
 const compression = require('compression');
 const cors = require('cors');
@@ -908,6 +909,36 @@ ${entries.map((entry) => `  <url>
     console.error('Sitemap 생성 오류', err);
     res.status(500).type('application/xml').send('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"></urlset>');
   }
+});
+
+// 동행복권 프록시: 브라우저 CORS/차단 문제를 피하기 위해 서버에서 대신 호출
+app.get('/api/lotto', (req, res) => {
+  const drwNo = req.query.drwNo ? String(req.query.drwNo).trim() : '';
+  const base = 'https://www.dhlottery.co.kr/common.do?method=getLottoNumber';
+  const url = drwNo ? `${base}&drwNo=${encodeURIComponent(drwNo)}` : base;
+
+  const request = https.get(url, { timeout: 7000, headers: { 'User-Agent': 'community-site/1.0' } }, (remoteRes) => {
+    let body = '';
+    remoteRes.on('data', (chunk) => { body += chunk; });
+    remoteRes.on('end', () => {
+      res.type('application/json');
+      try {
+        JSON.parse(body);
+        res.send(body);
+      } catch (e) {
+        res.status(502).json({ success: false, error: 'invalid_remote_response' });
+      }
+    });
+  });
+
+  request.on('timeout', () => {
+    request.destroy();
+    res.status(504).json({ success: false, error: 'timeout' });
+  });
+  request.on('error', (err) => {
+    console.error('lotto proxy error', err && err.message);
+    res.status(502).json({ success: false, error: err && err.message });
+  });
 });
 
 app.get('/api/posts', async (req, res) => {
