@@ -1811,6 +1811,33 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Health check endpoint for external monitors (UptimeRobot, cron-job.org 등)
+// Returns 200 when app is healthy. Also attempts a lightweight DB ping if DB is configured.
+app.get('/health', async (req, res) => {
+  try {
+    if (pgPool) {
+      // Postgres: simple query
+      await pgPool.query('SELECT 1');
+      return res.status(200).json({ ok: true, db: 'pg', ts: Date.now() });
+    }
+
+    if (typeof db !== 'undefined' && db) {
+      // sqlite3: use callback to report status
+      db.get('SELECT 1', [], (err) => {
+        if (err) return res.status(500).json({ ok: false, error: 'sqlite_ping_failed' });
+        return res.status(200).json({ ok: true, db: 'sqlite', ts: Date.now() });
+      });
+      return;
+    }
+
+    // No DB configured (edge case): still report app alive
+    return res.status(200).json({ ok: true, db: 'none', ts: Date.now() });
+  } catch (err) {
+    console.warn('[HEALTH] ping failed', err && err.message);
+    return res.status(500).json({ ok: false, error: 'db_ping_failed' });
+  }
+});
+
 // www 없는 도메인으로 리다이렉트
 app.use((req, res, next) => {
   if (req.headers.host.startsWith('www.')) {
