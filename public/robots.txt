@@ -56,4 +56,4 @@ Disallow: /
 User-agent: MJ12bot
 Disallow: /
 
-Sitemap: https://휴대폰90프로.store/sitemap.xml
+# Sitemap is listed above using Punycode domain to avoid IDN ambiguity
