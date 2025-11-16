@@ -1,0 +1,8 @@
+# robots for both domains
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/admin
+
+Sitemap: https://휴대폰90프로.store/sitemap.xml
+Sitemap: https://카드90프로.store/sitemap.xml
