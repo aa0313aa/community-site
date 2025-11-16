@@ -1811,6 +1811,16 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Explicitly serve our robots.txt from the public folder to avoid other handlers
+app.get('/robots.txt', (req, res) => {
+  try {
+    res.type('text/plain');
+    res.sendFile(path.join(__dirname, 'public', 'robots.txt'));
+  } catch (e) {
+    res.status(404).send('User-agent: *\nDisallow:');
+  }
+});
+
 // Health check endpoint for external monitors (UptimeRobot, cron-job.org 등)
 // Returns 200 when app is healthy. Also attempts a lightweight DB ping if DB is configured.
 app.get('/health', async (req, res) => {
