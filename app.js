@@ -1040,23 +1040,31 @@ app.post('/api/posts/:id/comments', async (req, res) => {
 // 업체 목록 조회
 app.get('/api/companies', async (req, res) => {
   try {
-    const { category, type, search } = req.query;
-  let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created, is_certified, certified_by, certified_at FROM companies';
+    let { category, type, search } = req.query;
+    // 기본 쿼리
+    let query = 'SELECT id, name, category, type, website, phone, messenger, messenger_id, description, rating, report_count, writer, created, is_certified, certified_by, certified_at FROM companies';
     const params = [];
     const conditions = [];
 
+    // 카테고리/타입 필터
     if (category) {
       conditions.push('category = ?');
-      params.push(category);
+      params.push(String(category).slice(0,50));
     }
     if (type) {
       conditions.push('type = ?');
-      params.push(type);
+      params.push(String(type).slice(0,50));
     }
-    if (search) {
-      // Postgres에서는 ILIKE로 변경하면 대소문자 무시 검색이 됩니다. 간단히 LIKE 유지.
-      conditions.push('(name LIKE ? OR description LIKE ?)');
-      params.push(`%${search}%`, `%${search}%`);
+
+    // 검색어는 클라이언트에서 오는 값이므로 안전하게 문자열화하고 길이 제한을 둠
+    if (typeof search !== 'undefined' && search !== null) {
+      search = String(search).replace(/[\u0000-\u001F\u007F]/g, ' ').trim();
+      if (search.length > 200) search = search.slice(0, 200);
+      if (search.length > 0) {
+        // Postgres에서는 ILIKE로 변경하면 대소문자 무시 검색이 됩니다. 간단히 LIKE 유지.
+        conditions.push('(name LIKE ? OR description LIKE ?)');
+        params.push(`%${search}%`, `%${search}%`);
+      }
     }
 
     if (conditions.length > 0) {
@@ -1069,7 +1077,7 @@ app.get('/api/companies', async (req, res) => {
     res.set('Cache-Control', 'public, max-age=60');
     res.json({ success: true, companies: rows || [] });
   } catch (err) {
-    console.error('업체 목록 조회 오류', err);
+    console.error('업체 목록 조회 오류', err && err.stack ? err.stack : err);
     res.status(500).json({ success: false, error: 'DB 오류' });
   }
 });
